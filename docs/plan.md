@@ -127,3 +127,17 @@ Things only the owner can do. Everything else is prepared in the repo.
    once it has run green once.
 2. GitHub → Settings → Code security: enable Dependabot alerts and security
    updates (version updates come from `.github/dependabot.yml`).
+
+### 4. Let the weekly flag check open pull requests (M7)
+
+1. GitHub → Settings → Actions → General → Workflow permissions: tick
+   **Allow GitHub Actions to create and approve pull requests**. Without it
+   `.github/workflows/flags.yml` finds changes but cannot open the pull
+   request.
+2. Pull requests opened with the workflow's token do not start CI on their
+   own (a GitHub rule). Close and reopen the pull request to run it, or add
+   a fine-grained token for this repository with Contents and Pull requests
+   write access as the Actions secret `FLAG_PR_TOKEN`; the workflow uses it
+   when it is there.
+3. To run it now: Actions → Flag update → Run workflow. On 2026-10-25 the
+   check found one change waiting: Moldova (revised on Commons 2026-10-22).

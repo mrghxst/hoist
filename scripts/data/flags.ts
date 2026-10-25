@@ -84,7 +84,7 @@ export async function discoverSources(countries: { id: string; name: string; com
 	writeJson(SOURCES_PATH, ordered);
 }
 
-async function commonsMeta(titles: string[]): Promise<Map<string, Meta>> {
+export async function commonsMeta(titles: string[]): Promise<Map<string, Meta>> {
 	const out = new Map<string, Meta>();
 	for (let i = 0; i < titles.length; i += 50) {
 		const batch = titles.slice(i, i + 50);

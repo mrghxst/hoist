@@ -1,0 +1,57 @@
+# Weekly: re-check every flag's Wikimedia Commons file (PROMPT.md 8.2). When
+# one has changed, rebuild the data and open a pull request with the flags
+# before and after. Never commits to main.
+name: Flag update
+
+on:
+  schedule:
+    - cron: '17 6 * * 1' # Mondays, 06:17 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: flag-update
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  flags:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Compare with Commons
+        id: check
+        run: node scripts/data/flag-update.ts check
+      - name: Rebuild the data
+        if: steps.check.outputs.changed != ''
+        run: pnpm data
+      - name: Data audits
+        if: steps.check.outputs.changed != ''
+        run: pnpm audit:data
+      - name: Before and after
+        if: steps.check.outputs.changed != ''
+        run: node scripts/data/flag-update.ts preview
+        env:
+          FLAG_BRANCH: flag-update
+      - name: Open the pull request
+        if: steps.check.outputs.changed != ''
+        uses: peter-evans/create-pull-request@v8
+        with:
+          # A token of the owner's starts CI on the pull request; the
+          # workflow's own token cannot (see docs/plan.md, owner step 4).
+          token: ${{ secrets.FLAG_PR_TOKEN || github.token }}
+          branch: flag-update
+          delete-branch: true
+          commit-message: 'chore(data): flags changed on Wikimedia Commons'
+          title: 'Flags changed on Wikimedia Commons'
+          body-path: reports/flag-update.md
+          labels: needs-triage

@@ -47,6 +47,8 @@
 	let engine = $state.raw<Engine>();
 	let Shortcuts = $state<typeof ShortcutsDialog>();
 	let loadError = $state(false);
+	// The map is a bonus: without it the typed answers still work (M7).
+	let mapError = $state(false);
 	let pendingSubmit = false;
 	let hydrated = $state(false);
 	let showHelp = $state(false);
@@ -304,6 +306,7 @@
 			{markers}
 			offsetY={wide ? -90 : 0}
 			view={{ lon: 15, lat: 25, zoom: wide ? 1.35 : 1.2 }}
+			onerror={() => (mapError = true)}
 		/>
 	</div>
 
@@ -447,6 +450,8 @@
 
 	{#if loadError}
 		<p class="error glass" role="alert">The flags did not load. Check the connection and reload the page.</p>
+	{:else if mapError}
+		<p class="error glass" role="status">The map did not load. You can still play: type the country as usual.</p>
 	{/if}
 
 	<div class="visually-hidden" aria-live="polite">{announce}</div>

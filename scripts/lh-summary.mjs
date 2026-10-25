@@ -17,7 +17,7 @@ for (const f of files) {
 	const scores = Object.values(r.categories)
 		.map((c) => `${c.id} ${Math.round(c.score * 100)}`)
 		.join(', ');
-	console.log(`${f}: ${scores} (benchmark index ${r.environment?.benchmarkIndex})`);
+	console.log(`${f}: ${new URL(r.finalDisplayedUrl ?? r.finalUrl).pathname}: ${scores} (benchmark index ${r.environment?.benchmarkIndex})`);
 	for (const k of ['first-contentful-paint', 'largest-contentful-paint', 'speed-index', 'total-blocking-time', 'cumulative-layout-shift']) {
 		console.log(`  ${k.padEnd(26)} ${String(a[k]?.displayValue).padEnd(10)} score ${a[k]?.score}`);
 	}
