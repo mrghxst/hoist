@@ -49,10 +49,22 @@ building. Choices the brief does not cover are in [decisions.md](decisions.md).
 - [x] Lighthouse on the real play page: 100 / 100 / 100 / 100, LCP 1.36 s,
       CLS 0 (was LCP 3.0 s; see decisions)
 
-## M4: Learning engine
-- [ ] FSRS, grading, queue rules
-- [ ] Review, Learn new, Region, Capitals, Reverse, Easy
-- [ ] Progress store, migrations, export / import
+## M4: Learning engine (done 2026-10-25)
+- [x] FSRS (ts-fsrs 5.4.2, retention 0.9), grading table, queue rules
+      (due first, at most 50; new at most 10 a day per mode; never twice in
+      a row; interleaving; Again back after 3 to 6), unit-tested
+- [x] Study cards for new flags, five at a time, no lookalike pair per batch
+- [x] Play runs spaced repetition for the chosen scope after the starter round
+- [x] Practice: Review, Learn new, Capitals, Reverse, Easy, seven regions;
+      settings (Play covers, new per day, territories)
+- [x] Progress store (`hoist:v1`), pure migrations, newer-version guard,
+      other-tab sync, export / import (merge by most recent) / reset
+- [x] A simulated month gives sensible intervals (median 27 days after 30
+      days, 15 to 50 answers a day); `node scripts/dev/simulate.ts`
+- [x] e2e: reload keeps progress, export, reset and import restores it
+      exactly, capitals, reverse (no answer in the page), easy mode, study cards
+- [x] Lighthouse 100 / 100 / 100 / 100, LCP 1.36 s, TBT under 10 ms, CLS 0;
+      initial JS 45.4 KB
 
 ## M5: Fun
 - [ ] Daily with share, streaks, speed run, mastery globe

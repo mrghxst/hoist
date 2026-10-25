@@ -274,6 +274,43 @@ kbd {
 	color: var(--muted);
 }
 
+/* Pill buttons and links: scope choices, finish actions, "Which one?". */
+.chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	min-height: 36px;
+	padding: 0 16px;
+	border-radius: 999px;
+	border: 1px solid var(--border-strong);
+	background: var(--bg);
+	color: var(--fg);
+	text-decoration: none;
+	cursor: pointer;
+	font-size: var(--t14);
+	transition: border-color 150ms var(--ease);
+}
+
+.chip:has(kbd) {
+	padding-left: 8px;
+}
+
+.chip:hover {
+	border-color: var(--fg);
+}
+
+.chip.primary {
+	background: var(--fg);
+	color: var(--bg);
+	border-color: var(--fg);
+}
+
 /* The error page. Its styles live here, not in +error.svelte: SvelteKit
    loads that page on every start, and a component style would add a CSS
    request before first paint. */

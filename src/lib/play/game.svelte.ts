@@ -1,13 +1,31 @@
 /**
- * One round of the core loop (PROMPT.md 1.2): show a flag, take a typed
- * answer, check it, reveal, move on. The order of flags comes from a
- * `Deck`, so the learning engine can plug in its own (M4).
+ * One round of the core loop (PROMPT.md 1.2): show a prompt, take an
+ * answer, check it, reveal, move on. What comes next is up to a `Deck`
+ * (the starter list, a spaced-repetition session, ...), and each prompt
+ * says what to show and what to ask:
+ *
+ * - show the flag, ask the name (the main mode)
+ * - show the flag and name, ask the capital (Capitals)
+ * - show the country on the globe, ask the name (Reverse)
+ * - show the flag or the name, pick from four (Easy mode)
+ * - a study card: show everything, nothing to answer (Learn new)
  */
 import { buildIndex, check, type NameIndex } from '#lib/match/match.ts';
+import { capitalIndex, checkCapital } from '#lib/match/capital.ts';
 import { hintText, maxHints } from '#lib/match/hint.ts';
+import { rate, type Rating } from '#lib/learn/grade.ts';
 import type { GameCountry, GameData } from '#lib/data/types.ts';
 
-export type Phase = 'ask' | 'choose' | 'done';
+export type Phase = 'study' | 'ask' | 'choose' | 'done';
+export type Show = 'flag' | 'globe' | 'name';
+export type Ask = 'name' | 'capital' | 'pick';
+
+export interface Prompt {
+	id: string;
+	study?: boolean;
+	show?: Show;
+	ask?: Ask;
+}
 
 export interface Outcome {
 	id: string;
@@ -16,19 +34,23 @@ export interface Outcome {
 	typo: boolean;
 	hints: number;
 	gaveUp: boolean;
-	/** The country the player named instead, if any. */
+	/** Picked from four rather than typed (Easy mode). */
+	picked: boolean;
+	/** The country the player named (or whose capital they named) instead. */
 	confused?: GameCountry;
 	/** What was typed, for the "you typed" line. */
 	typed: string;
 	ms: number;
+	rating: Rating;
+	ask: Ask;
 }
 
-/** Supplies the next flag and hears about each answer. */
+/** Supplies the next prompt and hears about each answer. */
 export interface Deck {
 	readonly label: string;
 	/** Position and total, when the round has a fixed length. */
 	progress(): { done: number; total?: number };
-	next(): string | null;
+	next(): Prompt | null;
 	record(outcome: Outcome): void;
 }
 
@@ -36,68 +58,97 @@ export class Game {
 	readonly data: GameData;
 	readonly byId: Map<string, GameCountry>;
 	private index: NameIndex;
+	private capitalsIndex?: NameIndex;
+	private random: () => number;
 	deck: Deck;
 
 	current = $state<GameCountry | null>(null);
+	show = $state<Show>('flag');
+	ask = $state<Ask>('name');
 	phase = $state<Phase>('ask');
 	input = $state('');
 	hints = $state(0);
 	outcome = $state<Outcome | null>(null);
+	/** "Which one?" chips for ambiguous names. */
 	choices = $state<GameCountry[]>([]);
+	/** The four options in Easy mode. */
+	options = $state<GameCountry[]>([]);
 	streak = $state(0);
 	bestStreak = $state(0);
+	right = $state(0);
+	answered = $state(0);
 	/** Bumps on every wrong answer, so the field can shake. */
 	wrongCount = $state(0);
 	finished = $state(false);
 	private shownAt = 0;
 
-	constructor(data: GameData, deck: Deck, extraNames?: Record<string, string[]>) {
+	constructor(data: GameData, deck: Deck, extraNames?: Record<string, string[]>, random = Math.random) {
 		this.data = data;
 		this.byId = new Map(data.countries.map((c) => [c.id, c]));
 		this.index = buildIndex(data.countries, data.ambiguous, extraNames);
 		this.deck = deck;
+		this.random = random;
+	}
+
+	/** Built on the first capital question: Play never needs it. */
+	private get capitals(): NameIndex {
+		return (this.capitalsIndex ??= capitalIndex(this.data.countries));
 	}
 
 	setExtraNames(extra?: Record<string, string[]>) {
 		this.index = buildIndex(this.data.countries, this.data.ambiguous, extra);
 	}
 
-	/** Start (or restart) with a deck; shows its first flag. */
+	/** Start (or restart) with a deck; shows its first prompt. */
 	start(deck = this.deck) {
 		this.deck = deck;
 		this.finished = false;
+		this.right = 0;
+		this.answered = 0;
 		this.advance();
 	}
 
 	advance() {
-		const id = this.deck.next();
+		const p = this.deck.next();
 		this.outcome = null;
 		this.choices = [];
+		this.options = [];
 		this.input = '';
 		this.hints = 0;
-		this.phase = 'ask';
-		if (!id) {
+		if (!p) {
 			this.current = null;
 			this.finished = true;
+			this.phase = 'ask';
 			return;
 		}
-		this.current = this.byId.get(id) ?? null;
+		this.current = this.byId.get(p.id) ?? null;
+		this.show = p.show ?? 'flag';
+		this.ask = p.ask ?? 'name';
+		this.phase = p.study ? 'study' : 'ask';
+		if (!p.study && this.ask === 'pick' && this.current) this.options = this.pickOptions(this.current);
 		this.shownAt = performance.now();
 	}
 
-	/** Tab: reveal the next letter, up to half the name. */
-	hint() {
+	/** The text the hint letters come from. */
+	get answerText(): string {
 		const c = this.current;
-		if (!c || this.phase !== 'ask') return;
-		if (this.hints >= maxHints(c.name)) return;
+		if (!c) return '';
+		return this.ask === 'capital' ? c.capital.name : c.name;
+	}
+
+	/** Tab: reveal the next letter, up to half the answer. */
+	hint() {
+		if (!this.current || this.phase !== 'ask' || this.ask === 'pick') return;
+		const text = this.answerText;
+		if (this.hints >= maxHints(text)) return;
 		this.hints++;
-		this.input = hintText(c.name, this.hints);
+		this.input = hintText(text, this.hints);
 	}
 
 	submit() {
 		const c = this.current;
-		if (!c || this.phase !== 'ask') return;
-		const r = check(this.input, c.id, this.index);
+		if (!c || this.phase !== 'ask' || this.ask === 'pick') return;
+		const r = this.ask === 'capital' ? checkCapital(this.input, c.id, this.capitals) : check(this.input, c.id, this.index);
 		if (r.kind === 'empty') return;
 		if (r.kind === 'ambiguous') {
 			this.choices = r.ids.map((id) => this.byId.get(id)!).filter(Boolean);
@@ -116,28 +167,41 @@ export class Game {
 		else this.finish(false, false, this.byId.get(id));
 	}
 
+	/** Pick one of the four options (Easy mode). */
+	pick(id: string) {
+		const c = this.current;
+		if (!c || this.phase !== 'ask' || this.ask !== 'pick') return;
+		this.finish(id === c.id, false, id === c.id ? undefined : this.byId.get(id), false, true);
+	}
+
 	/** Esc: show the answer, rated Again. */
 	giveUp() {
-		if (!this.current || this.phase === 'done') return;
+		if (!this.current || this.phase === 'done' || this.phase === 'study') return;
 		this.finish(false, false, undefined, true);
 	}
 
-	private finish(correct: boolean, typo: boolean, confused?: GameCountry, gaveUp = false) {
+	private finish(correct: boolean, typo: boolean, confused?: GameCountry, gaveUp = false, picked = false) {
 		const c = this.current!;
+		const ms = performance.now() - this.shownAt;
 		const outcome: Outcome = {
 			id: c.id,
 			correct,
 			typo,
 			hints: this.hints,
 			gaveUp,
+			picked,
 			confused,
 			typed: this.input.trim(),
-			ms: performance.now() - this.shownAt
+			ms,
+			rating: rate({ correct, typo, hints: this.hints, gaveUp, ms, picked }),
+			ask: this.ask
 		};
 		this.outcome = outcome;
 		this.phase = 'done';
 		this.choices = [];
+		this.answered++;
 		if (correct) {
+			this.right++;
 			this.streak++;
 			this.bestStreak = Math.max(this.bestStreak, this.streak);
 		} else {
@@ -146,6 +210,27 @@ export class Game {
 		}
 		this.deck.record(outcome);
 	}
+
+	/**
+	 * Easy mode: the answer and three others from the same continent, none of
+	 * them a lookalike of it (this mode is for beginners).
+	 */
+	private pickOptions(c: GameCountry): GameCountry[] {
+		const near = new Set(this.data.lookalikes.filter((g) => g.members.includes(c.id)).flatMap((g) => g.members));
+		const pool = this.data.countries.filter((x) => x.id !== c.id && x.pack === c.pack && !near.has(x.id));
+		const same = pool.filter((x) => x.continent === c.continent);
+		const others = this.shuffle(same.length >= 3 ? same : pool).slice(0, 3);
+		return this.shuffle([c, ...others]);
+	}
+
+	private shuffle<T>(xs: T[]): T[] {
+		const a = [...xs];
+		for (let i = a.length - 1; i > 0; i--) {
+			const j = Math.floor(this.random() * (i + 1));
+			[a[i], a[j]] = [a[j]!, a[i]!];
+		}
+		return a;
+	}
 }
 
 /** A fixed list of flags, in order (the starter round, the daily). */
@@ -153,46 +238,20 @@ export class ListDeck implements Deck {
 	readonly label: string;
 	private ids: string[];
 	private i = 0;
-	constructor(label: string, ids: string[]) {
+	private onRecord?: (o: Outcome) => void;
+	constructor(label: string, ids: string[], onRecord?: (o: Outcome) => void) {
 		this.label = label;
 		this.ids = ids;
+		this.onRecord = onRecord;
 	}
 	progress() {
-		return { done: this.i, total: this.ids.length };
+		return { done: Math.min(this.i, this.ids.length), total: this.ids.length };
 	}
-	next() {
-		return this.ids[this.i++] ?? null;
+	next(): Prompt | null {
+		const id = this.ids[this.i++];
+		return id ? { id } : null;
 	}
-	record() {}
-}
-
-/** Endless shuffled practice over a set of countries, never twice in a row. */
-export class ShuffleDeck implements Deck {
-	readonly label: string;
-	private ids: string[];
-	private bag: string[] = [];
-	private last: string | null = null;
-	private count = 0;
-	constructor(label: string, ids: string[]) {
-		this.label = label;
-		this.ids = ids;
+	record(o: Outcome) {
+		this.onRecord?.(o);
 	}
-	progress() {
-		return { done: this.count };
-	}
-	next() {
-		if (!this.bag.length) {
-			this.bag = [...this.ids];
-			for (let i = this.bag.length - 1; i > 0; i--) {
-				const j = Math.floor(Math.random() * (i + 1));
-				[this.bag[i], this.bag[j]] = [this.bag[j]!, this.bag[i]!];
-			}
-			if (this.bag[this.bag.length - 1] === this.last && this.bag.length > 1) this.bag.unshift(this.bag.pop()!);
-		}
-		const id = this.bag.pop() ?? null;
-		this.last = id;
-		this.count++;
-		return id;
-	}
-	record() {}
 }

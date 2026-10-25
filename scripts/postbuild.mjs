@@ -9,6 +9,9 @@ import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 const root = 'build';
+// `vite preview` serves SvelteKit's own copy of the prerendered pages, so
+// patch that too: preview and the end-to-end tests then match what ships.
+const roots = [root, join('.svelte-kit', 'output', 'prerendered', 'pages')];
 const nodes = join(root, '_app', 'immutable', 'nodes');
 const errorNode = readdirSync(nodes).find((f) => /^1\.[\w-]+\.js$/.test(f));
 if (!errorNode) throw new Error('postbuild: no nodes/1 chunk in build/_app/immutable/nodes');
@@ -27,7 +30,7 @@ function* htmlFiles(dir) {
 }
 
 let count = 0;
-for (const file of htmlFiles(root)) {
+for (const file of roots.flatMap((r) => [...htmlFiles(r)])) {
 	const html = readFileSync(file, 'utf8');
 	const start = html.match(/<link href="([^"]*)_app\/immutable\/entry\/start\.[\w-]+\.js" rel="modulepreload">/);
 	if (!start || html.includes(`nodes/${errorNode}`)) continue;

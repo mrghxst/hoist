@@ -231,3 +231,123 @@ test, so the e2e test stands in a fake `visualViewport` that shrinks by
 375×512 (812 minus a keyboard) were reviewed in light and dark. On short
 screens the flag card is 96 px and the flag fits inside it (it overflowed
 before).
+
+## M4
+
+**Easy mode counts with less weight** (PROMPT.md 2.4): a right pick is rated
+Hard at best, never Good or Easy, so recognising a flag among four never
+schedules it as far out as recalling it. A wrong pick is Again. Easy mode
+feeds the main flag card; it has no card of its own.
+
+**New cards get a study card first, in every mode.** Learn new (7.2) shows
+each new flag with its name, flight and capital, then quizzes the five in
+mixed order. Play, Region, Capitals, Reverse and Easy introduce their new
+cards the same way, five at a time, so no mode asks for something never
+shown. The study card has no answer field.
+
+**The daily new-card limit is per mode.** Ten new flags, ten new capitals
+and ten new reverse cards a day (setting: 5, 10, 20, 30). Learn new is an
+explicit request for five new flags and ignores the limit (it still counts
+toward it).
+
+**The starter round is a warm-up.** Its ten well-known flags are scheduled
+like any answers, but do not use up the day's new flags, so picking "Learn
+all 197" or a region right after it starts with new flags.
+
+**Nothing due, nothing new: extra practice.** A session with nothing to do
+offers the 20 seen cards least likely to be recalled (lowest FSRS
+retrievability). FSRS handles early reviews, so these answers are scheduled
+normally.
+
+**An Again with no other card left** cannot come back "after 3 to 6 other
+cards": it stays due and opens the next session.
+
+**Queue interleaving** (3.2): when picking the next card the queue looks at
+the next four and takes the first that is not "near" the last flag shown:
+same lookalike group, or same region sharing two colours. Without such a
+card it takes the first that is not the same flag. Most overdue still comes
+first in practice; the lookalike drill (M5) turns interleaving off.
+
+**Introduction order** (7.2): the 40 hand-picked familiar flags in their
+order, then easy to hard by estimated difficulty, then by the population of
+the largest city. Batches of five never hold two members of one lookalike
+group; a flag that would clash waits for the next batch.
+
+**Mastery levels** (2.5): untouched (never answered), learning (in learning
+or relearning), known (in review), mastered (in review with a stability of
+21 days or more).
+
+**Progress store** (3.4): one object under `hoist:v1` with `v`, `settings`,
+`cards` (`flag:JP`, `capital:JP`, `reverse:JP`; FSRS state with short keys),
+`days` (per local date: answers, right, new per mode) and `updated`. 197
+countries × 3 modes with a year of days stays under 200 KB (tested).
+Settings are written on their own (`writeSettings`) and the card store
+never writes them, so a stale copy cannot undo a theme change made in
+between. Other tabs' saves are picked up through the `storage` event. A
+store written by a newer version is read but never overwritten. Migrations
+are pure functions (`src/lib/learn/schema.ts`); v0 is the M0–M3 shape
+(settings only).
+
+**Import merges** by most recent review per card; days keep the larger
+counts; settings already set here stay, missing ones come from the file.
+Reset keeps the settings.
+
+**Capitals mode accepts** the capital, its listed alternatives (La Paz,
+Cape Town, Bloemfontein, Lobamba, Malabo), and for "… City" capitals the
+name without "City" (Mexico, Kuwait, Panama, Guatemala, Vatican), with the
+same typo rules as country names. Naming another country's capital is wrong
+and says whose capital it is.
+
+**Reverse mode** highlights and flies to the country with no labels, so the
+capital's name cannot give the answer away; the labels and the flag appear
+after the answer. The optional "pick its flag from four" step is left for
+later; the brief marks it optional.
+
+**Practice routes** are prerendered: `/practice` (cards with counts, and the
+settings: what Play covers, new flags per day, territories) and
+`/practice/[mode]` for review, learn, capitals, reverse, easy and the seven
+regions. Lookalikes and Speed run come with M5. A first version of
+`/progress` has the totals and export, import and reset; M5 adds the
+mastery globe, calendar and hardest flags.
+
+**`aria-busy` on the quiz console** marks it as loading until the quiz data
+and engine are in; the end-to-end tests wait on it.
+
+### Keeping the play page fast as it grew
+
+The play screen became a shared component (`PlayScreen.svelte`) for Play
+and every practice mode. What only shows once the quiz runs (the study and
+result panel, `Reveal.svelte`, and Easy mode's options, `Pick.svelte`) loads
+with the lazy engine, not in the initial JavaScript. The engine
+(`src/lib/play/engine.ts`) holds the game, decks, learner, scheduler
+(ts-fsrs) and those parts, and loads after first paint.
+
+Lighthouse's simulated LCP depends on how many round trips the largest
+early file needs (it models TCP slow start per connection). One 25 KB
+shared chunk ended at 1.506 s; splitting it into the Svelte runtime and the
+app's shared code (two `codeSplitting` groups, each under about 18 KB
+gzipped) brought LCP back to 1.36 s. Rolldown's `maxSize` split it into 38
+tiny files instead and made it worse (2.0 s).
+
+`/practice/[mode]` reads its mode in `+page.server.ts` (at prerender time)
+rather than `+page.ts`: a universal load made SvelteKit import that module
+as a namespace, which pulled rolldown's tiny helper into a chunk of its own,
+one more request before first paint.
+
+Turning the geometry into shapes, and setting up the quiz, now happen in a
+few short tasks (`prepareInSteps`, yields in `PlayScreen`) instead of one
+40 ms task, and the capitals index is built on the first capital question.
+Total Blocking Time went from 140–200 ms to under 10 ms.
+
+**Idle rotation stops on devices that cannot draw it cheaply.** If even the
+quickest of the first three idle frames takes over 12 ms, the globe stays
+still until the player moves it (as with reduced motion). With a GPU the
+canvas draws in about 4 ms a frame here and keeps turning. Chrome without a
+GPU, like the CI runner, draws it on the main thread at 15–50 ms a frame,
+and Lighthouse counted every frame as blocking: Performance was 72–75 in CI
+while LCP passed. 12 ms is where a frame becomes a "long task" under
+Lighthouse's 4× CPU slowdown. CI now uploads the Lighthouse reports.
+
+`scripts/postbuild.mjs` now also patches SvelteKit's own copy of the
+prerendered pages, which `vite preview` serves, so preview and the
+end-to-end tests match what ships.

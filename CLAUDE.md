@@ -20,6 +20,7 @@ pnpm lighthouse       # Lighthouse CI on build/ (needs Chrome; CHROME_PATH works
 pnpm data             # the data pipeline (needs network on first run)
 pnpm audit:data       # data audits on the committed files
 node scripts/dev/flights.ts <dir> --gpu [--throttle]   # globe frame times
+node scripts/dev/simulate.ts [days]                     # simulated learner
 pnpm fonts            # re-subset Geist (needs Python fonttools + brotli)
 ```
 
@@ -51,11 +52,18 @@ src/app.css             tokens (PROMPT.md 6.1), glass panels, base styles
 src/lib/brand.ts        product name and domain (one place)
 src/lib/globe/          Globe class (Canvas 2D), sphere.ts renderer, camera,
                         data loading, palette from the CSS tokens
-src/lib/match/          normalising, answer matching, hints
+src/lib/match/          normalising, answer matching (countries, capitals), hints
+src/lib/learn/          spaced repetition: grading, FSRS wrapper, session queue,
+                        introduction order, planner, learner, store, schema
+                        and migrations, export / import
+src/lib/play/           the quiz: Game and decks, PlayScreen (shared by Play
+                        and Practice), Reveal and Pick (lazy), the lazy
+                        engine entry, scopes and practice modes
 src/lib/data/           generated data (do not edit by hand), types.ts
 src/lib/store/          localStorage access (storage.ts), theme state
 src/lib/ui/             TopBar, ThemeToggle, small components
-src/routes/             /, /daily, /practice, /progress, /flags, /about, /lookalikes
+src/routes/             /, /daily, /practice, /practice/[mode], /progress,
+                        /flags, /about, /lookalikes
 static/fonts/           Geist subset (OFL), versioned file names
 static/_headers         Cloudflare cache headers
 wrangler.jsonc          Cloudflare Workers static assets from build/

@@ -88,25 +88,48 @@ export function decimateLines(lines: MultiLineString, step: number): MultiLineSt
 }
 
 export function prepare(topo: Topology, dots: ArrayBuffer): GlobeData {
+	let out!: GlobeData;
+	for (const _ of steps(topo, dots, (d) => (out = d)));
+	return out;
+}
+
+/**
+ * The same as `prepare`, in short tasks: it yields to the browser between
+ * steps, so turning the geometry into shapes never blocks input for long
+ * (Total Blocking Time, PROMPT.md 10).
+ */
+export async function prepareInSteps(topo: Topology, dots: ArrayBuffer): Promise<GlobeData> {
+	let out!: GlobeData;
+	for (const _ of steps(topo, dots, (d) => (out = d))) await new Promise((r) => setTimeout(r, 0));
+	return out;
+}
+
+function* steps(topo: Topology, dots: ArrayBuffer, done: (d: GlobeData) => void): Generator<void> {
 	const coll = topo.objects.countries as GeometryCollection;
 	const land = merge(topo, coll.geometries as never) as MultiPolygon;
 	const farLand = decimate(land, 4);
+	yield;
 	const borders = mesh(topo, coll, (a, b) => a !== b) as MultiLineString;
-	return {
+	yield;
+	const countries = countriesOf(topo);
+	const decoded = decodeDots(dots);
+	yield;
+	const landShape = shapeOf([land]);
+	const landFast = shapeOf([decimate(land, 3)]);
+	yield;
+	const farShape = shapeOf([farLand]);
+	const farLandFast = shapeOf([decimate(land, 8)]);
+	yield;
+	const bordersShape = shapeOf([borders]);
+	const bordersFast = shapeOf([decimateLines(borders, 4)]);
+	done({
 		land,
 		farLand,
 		borders,
-		countries: countriesOf(topo),
-		dots: decodeDots(dots),
-		shapes: {
-			land: shapeOf([land]),
-			landFast: shapeOf([decimate(land, 3)]),
-			farLand: shapeOf([farLand]),
-			farLandFast: shapeOf([decimate(land, 8)]),
-			borders: shapeOf([borders]),
-			bordersFast: shapeOf([decimateLines(borders, 4)])
-		}
-	};
+		countries,
+		dots: decoded,
+		shapes: { land: landShape, landFast, farLand: farShape, farLandFast, borders: bordersShape, bordersFast }
+	});
 }
 
 export async function loadGlobeData(fetcher: typeof fetch = fetch): Promise<GlobeData> {
@@ -120,7 +143,7 @@ export async function loadGlobeData(fetcher: typeof fetch = fetch): Promise<Glob
 			return r.arrayBuffer();
 		})
 	]);
-	return prepare(topo, dots);
+	return prepareInSteps(topo, dots);
 }
 
 export async function loadDetail(fetcher: typeof fetch = fetch): Promise<Map<string, Feature>> {

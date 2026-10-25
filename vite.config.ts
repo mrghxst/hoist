@@ -24,7 +24,24 @@ export default defineConfig({
 				// by one page stays with it; the globe stays a lazy chunk.
 				// SvelteKit finds its runtime by that chunk, so it stays apart.
 				codeSplitting: {
-					groups: [{ name: 'app', tags: ['$initial'], minShareCount: 2, test: (id) => !/kit[\\/]src[\\/]runtime[\\/]client[\\/]/.test(id) }]
+					// Two files rather than one big one: on a slow link they download
+					// in parallel, and a big file is the last to arrive (Lighthouse
+					// models TCP slow start, so ~18 KB gzipped is a step).
+					groups: [
+						{
+							name: 'svelte',
+							tags: ['$initial'],
+							priority: 2,
+							test: /node_modules[\\/](\.pnpm[\\/][^\\/]+[\\/]node_modules[\\/])?svelte[\\/]/
+						},
+						{
+							name: 'app',
+							tags: ['$initial'],
+							minShareCount: 2,
+							priority: 1,
+							test: (id) => !/kit[\\/]src[\\/]runtime[\\/]client[\\/]/.test(id)
+						}
+					]
 				}
 			}
 		}

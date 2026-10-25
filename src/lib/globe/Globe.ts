@@ -45,6 +45,14 @@ type Mastery = Map<string, 0 | 1 | 2 | 3>;
 
 const DPR_CAP = 2;
 const AUTO_SPEED = 3 / 1000; // degrees per ms
+/**
+ * Idle rotation is decoration: if a frame takes longer than this even at its
+ * quickest (a slow phone, or Chrome without a GPU drawing the canvas on the
+ * main thread), the globe stays still until the player moves it, so the
+ * page stays responsive and the device cool (PROMPT.md 4.2, 10).
+ */
+const IDLE_FRAME_BUDGET = 12;
+const IDLE_SAMPLES = 3;
 const IDLE_RESUME = 8000;
 const PULSE_MS = 1100;
 const PULSES = 2;
@@ -94,6 +102,8 @@ export class Globe {
 	private lastFrame = 0;
 	private destroyed = false;
 	private frameTimes: number[] = [];
+	private idleFrames: number[] = [];
+	private idleTooSlow = false;
 	/** Per-layer timings when profiling (dev tool). */
 	profile: Record<string, number> | null = null;
 	private mark(name: string, t: number): number {
@@ -255,6 +265,7 @@ export class Globe {
 		const dt = this.lastFrame ? Math.min(64, now - this.lastFrame) : 16;
 		this.lastFrame = now;
 		let moving = false;
+		let idle = false;
 
 		if (this.flight) {
 			const t = (now - this.flight.start) / this.flight.duration;
@@ -272,10 +283,11 @@ export class Globe {
 			this.cam.lat = Math.max(-89, Math.min(89, this.cam.lat + this.inertia.vLat * dt));
 			if (Math.hypot(this.inertia.vLon, this.inertia.vLat) < 0.002) this.inertia = null;
 			else moving = true;
-		} else if (this.autoRotate && !this.drag) {
+		} else if (this.autoRotate && !this.idleTooSlow && !this.drag) {
 			if (now - this.lastInteraction > IDLE_RESUME) {
 				this.cam.lon = wrap(this.cam.lon + AUTO_SPEED * dt);
 				moving = true;
+				idle = true;
 			} else if (!this.idleTimer) {
 				// Wake up again when the idle time is over.
 				this.idleTimer = setTimeout(() => {
@@ -287,7 +299,15 @@ export class Globe {
 
 		const t0 = performance.now();
 		this.draw(now);
-		if (moving || this.drag) this.frameTimes.push(performance.now() - t0);
+		const spent = performance.now() - t0;
+		if (moving || this.drag) this.frameTimes.push(spent);
+		if (idle && this.data && this.idleFrames.length < IDLE_SAMPLES) {
+			this.idleFrames.push(spent);
+			if (this.idleFrames.length === IDLE_SAMPLES && Math.min(...this.idleFrames) > IDLE_FRAME_BUDGET) {
+				this.idleTooSlow = true;
+				moving = false;
+			}
+		}
 		if (this.frameTimes.length > 600) this.frameTimes.splice(0, 300);
 
 		const pulsing = !!this.markers && !reducedMotion() && now - this.markersAt < PULSE_MS * PULSES;

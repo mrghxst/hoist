@@ -233,6 +233,14 @@
 		background: var(--overlay);
 	}
 
+	/* On phones the console can grow over the bottom of the globe. */
+	@media (max-width: 899px) {
+		.controls {
+			top: 12px;
+			bottom: auto;
+		}
+	}
+
 	@keyframes in {
 		from {
 			opacity: 0;
