@@ -40,6 +40,9 @@ jobs:
         run: pnpm test:e2e
       - name: Lighthouse
         run: pnpm lighthouse
+      - name: Lighthouse summary
+        if: always()
+        run: node scripts/lh-summary.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -48,6 +51,6 @@ jobs:
             playwright-report
             test-results
             .lighthouseci
-            .lighthouseci
+          include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 14
