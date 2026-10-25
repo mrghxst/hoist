@@ -37,6 +37,8 @@ export interface GlobeOptions {
 	view?: { lon: number; lat: number; zoom?: number };
 	onViewChange?: (camera: Camera) => void;
 	onInteract?: () => void;
+	/** Element that receives arrow and +/− keys (defaults to the canvas). */
+	keyTarget?: HTMLElement;
 }
 
 type Mastery = Map<string, 0 | 1 | 2 | 3>;
@@ -747,7 +749,8 @@ export class Globe {
 			this.stopMotion();
 			this.zoomAt(clampZoom(this.cam.zoom * 1.6), this.local(e));
 		});
-		on('keydown', (e) => {
+		const keyTarget = this.opts.keyTarget ?? c;
+		const onKey = (e: KeyboardEvent) => {
 			const step = 10 / this.cam.zoom;
 			const keys: Record<string, () => void> = {
 				ArrowLeft: () => this.rotateBy(-step, 0),
@@ -763,7 +766,9 @@ export class Globe {
 				e.preventDefault();
 				fn();
 			}
-		});
+		};
+		keyTarget.addEventListener('keydown', onKey);
+		this.cleanup.push(() => keyTarget.removeEventListener('keydown', onKey));
 	}
 
 	private local(e: { clientX: number; clientY: number }) {

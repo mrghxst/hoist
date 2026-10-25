@@ -37,10 +37,15 @@ building. Choices the brief does not cover are in [decisions.md](decisions.md).
       and phone screenshots
 - [x] Frame times 2.5 ms (budget 6), 10.1 ms at 4× throttle (budget 14)
 
-## M3: The core loop
-- [ ] Flag card, answer field, matching (150+ cases), result, globe reveal
-- [ ] Hints, give up, ambiguous chips, keyboard loop
-- [ ] Phone layout with keyboard open, starter round
+## M3: The core loop (in progress)
+- [x] Flag card, answer field, matching (208 cases), result, globe reveal
+- [x] Hints (Tab), give up (Esc), "Which one?" chips (number keys), `?` help
+- [x] Keyboard loop; e2e: full starter round, wrong then right, Congo chips,
+      typo accepted, no answer in the DOM, first flag in the HTML
+- [x] Starter round for first visits, then "Learn all 197" or a region
+- [x] Desktop and 375 px screenshots in light and dark reviewed
+- [ ] Check the phone layout with the on-screen keyboard open (visualViewport)
+- [ ] Re-run Lighthouse on the real play page (LCP with the globe)
 
 ## M4: Learning engine
 - [ ] FSRS, grading, queue rules

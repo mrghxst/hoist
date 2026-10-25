@@ -1,4 +1,5 @@
 import game from '#lib/data/game.json';
+import gameUrl from '#lib/data/game.json?url';
 import type { GameData } from '#lib/data/types.ts';
 
 // Prerendered: the first flag of the starter round is in the initial HTML,
@@ -6,5 +7,5 @@ import type { GameData } from '#lib/data/types.ts';
 export function load() {
 	const data = game as unknown as GameData;
 	const first = data.countries.find((c) => c.id === data.starter[0])!;
-	return { first: { flag: first.flag, ratio: first.ratio } };
+	return { first: { flag: first.flag, ratio: first.ratio }, gameUrl };
 }

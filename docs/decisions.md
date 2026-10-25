@@ -163,3 +163,18 @@ page's initial JS is 38.8 KB gzipped. LCP is re-checked in M3.
 **Static globes** are 240 px SVGs with a 7,000-point lattice, dots drawn as
 zero-length square-capped subpaths, and a coarse graticule: 17.7 KB average,
 432 files. Flag pages show the light or dark one by theme.
+
+## M3
+
+**Play layout: a centred glass console.** Following the owner's "middle of the
+screen" direction, the globe fills the stage and is centred (moved up 90 px on
+desktop), and a wide glass console sits centred at the bottom: the flag on the
+left, the answer and result on the right. On phones the globe takes the top
+45% and the console rides above the keyboard, as the brief describes.
+
+**The globe's focus target** is a wrapper with `role="application"` and the
+view description as its label; the canvas itself is `aria-hidden`. A
+focusable canvas cannot also be `role="img"`.
+
+**`?deck=CD,CG`** plays a fixed list of flags. The end-to-end tests use it to
+reach specific flags; it reveals nothing the player does not see anyway.

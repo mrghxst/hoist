@@ -37,6 +37,7 @@
 	}: Props = $props();
 
 	let canvas: HTMLCanvasElement;
+	let wrapper: HTMLDivElement;
 	let globe = $state<GlobeClass | null>(null);
 	let ready = $state(false);
 	let failed = $state(false);
@@ -56,6 +57,7 @@
 				const g = new Globe(canvas, {
 					autoRotate,
 					view,
+					keyTarget: wrapper,
 					onInteract: () => oninteract?.(),
 					onViewChange: (cam) => {
 						if (cam.zoom > 1.8 && !detailLoading) {
@@ -130,7 +132,18 @@
 </script>
 
 <div class="globe" class:ready class:failed>
-	<canvas bind:this={canvas} role="img" aria-label={label} tabindex="0"></canvas>
+	<!-- Focus the globe to turn it with the arrow keys and zoom with + and −. -->
+	<!-- svelte-ignore a11y_no_noninteractive_tabindex: it takes keys, so it must be focusable -->
+	<div
+		class="focus"
+		bind:this={wrapper}
+		tabindex="0"
+		role="application"
+		aria-roledescription="globe"
+		aria-label="{label}. Arrow keys turn it, plus and minus zoom."
+	>
+		<canvas bind:this={canvas} aria-hidden="true"></canvas>
+	</div>
 	{#if controls && ready}
 		<div class="controls glass" role="group" aria-label="Globe controls">
 			<button type="button" aria-label="Zoom out" onclick={() => globe?.zoomBy(1 / 1.5)}>
@@ -153,6 +166,18 @@
 		height: 100%;
 	}
 
+	.focus {
+		width: 100%;
+		height: 100%;
+		border-radius: 24px;
+		outline: none;
+	}
+
+	.focus:focus-visible {
+		outline: 2px solid var(--fg);
+		outline-offset: -2px;
+	}
+
 	canvas {
 		display: block;
 		width: 100%;
@@ -170,11 +195,6 @@
 
 	.ready canvas {
 		opacity: 1;
-	}
-
-	canvas:focus-visible {
-		outline: 2px solid var(--fg);
-		outline-offset: -2px;
 	}
 
 	.controls {
