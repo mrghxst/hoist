@@ -21,18 +21,30 @@
     "test:e2e": "playwright test",
     "size": "node scripts/size.mjs",
     "lighthouse": "lhci autorun",
-    "fonts": "sh scripts/fonts/subset.sh"
+    "fonts": "sh scripts/fonts/subset.sh",
+    "data": "node scripts/data/build.ts",
+    "audit:data": "node scripts/data/audit.ts",
+    "data:sheet": "node scripts/data/contact-sheet.ts"
   },
   "devDependencies": {
     "@lhci/cli": "0.15.1",
     "@playwright/test": "1.64.1",
+    "@resvg/resvg-js": "2.6.2",
     "@sveltejs/adapter-static": "4.0.0",
     "@sveltejs/kit": "3.1.0",
     "@sveltejs/vite-plugin-svelte": "7.3.1",
+    "@types/d3-geo": "3.1.1",
+    "@types/geojson": "7946.0.16",
     "@types/node": "26.6.5",
+    "@types/topojson-client": "3.1.5",
+    "@types/topojson-specification": "1.0.5",
+    "fflate": "0.8.3",
     "geist": "1.8.2",
+    "mapshaper": "0.7.98",
+    "sharp": "0.35.5",
     "svelte": "5.57.2",
     "svelte-check": "4.7.7",
+    "svgo": "4.1.0",
     "typescript": "6.0.3",
     "vite": "8.3.5",
     "vitest": "5.0.5",
@@ -44,6 +56,16 @@
       "sharp",
       "workerd",
       "@resvg/resvg-js"
+    ],
+    "ignoredBuiltDependencies": [
+      "better-sqlite3"
     ]
+  },
+  "dependencies": {
+    "d3-geo": "3.1.1",
+    "d3-inertia": "0.4.0",
+    "topojson-client": "3.1.0",
+    "ts-fsrs": "5.4.2",
+    "versor": "0.2.0"
   }
 }

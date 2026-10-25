@@ -1,0 +1,258 @@
+{
+	"_comment": "Manual corrections keyed by cca2 (PROMPT.md 8.4). Every changed field is {value, source, checked}. The build fails if one has no source or date. capital.value: name, optional lat/lon (else GeoNames PPLC), note shown under the capital, alts accepted in the capitals mode. largest.value: name, lat, lon, optional pop. view.value: centre [lon, lat] and zoom.",
+	"AF": {
+		"flagNote": {
+			"value": "This is the flag flown in Afghanistan today. The black, red and green tricolour of 2013–2021 is still used at the United Nations and by some embassies.",
+			"source": "https://en.wikipedia.org/wiki/Flag_of_Afghanistan",
+			"checked": "2026-10-25"
+		}
+	},
+	"BJ": {
+		"capital": {
+			"value": {
+				"name": "Porto-Novo",
+				"note": "Cotonou is the seat of government."
+			},
+			"source": "https://en.wikipedia.org/wiki/List_of_countries_with_multiple_capitals",
+			"checked": "2026-10-25"
+		}
+	},
+	"BO": {
+		"capital": {
+			"value": {
+				"name": "Sucre",
+				"note": "Constitutional capital. La Paz is the seat of government.",
+				"alts": [
+					"La Paz"
+				]
+			},
+			"source": "https://en.wikipedia.org/wiki/List_of_countries_with_multiple_capitals",
+			"checked": "2026-10-25"
+		},
+		"largest": {
+			"value": {
+				"name": "Santa Cruz de la Sierra",
+				"lat": -17.78629,
+				"lon": -63.18117,
+				"pop": 1831434
+			},
+			"source": "https://en.wikipedia.org/wiki/Santa_Cruz_de_la_Sierra",
+			"checked": "2026-10-25"
+		}
+	},
+	"CD": {
+		"name": {
+			"value": "Democratic Republic of the Congo",
+			"source": "https://www.un.org/en/about-us/member-states",
+			"checked": "2026-10-25"
+		}
+	},
+	"CI": {
+		"name": {
+			"value": "Côte d'Ivoire",
+			"source": "https://www.un.org/en/about-us/member-states",
+			"checked": "2026-10-25"
+		},
+		"capital": {
+			"value": {
+				"name": "Yamoussoukro",
+				"note": "Abidjan is the economic capital."
+			},
+			"source": "https://en.wikipedia.org/wiki/List_of_countries_with_multiple_capitals",
+			"checked": "2026-10-25"
+		}
+	},
+	"CV": {
+		"name": {
+			"value": "Cabo Verde",
+			"source": "https://www.un.org/en/about-us/member-states",
+			"checked": "2026-10-25"
+		}
+	},
+	"FJ": {
+		"largest": {
+			"value": {
+				"name": "Suva",
+				"lat": -18.13683,
+				"lon": 178.42531,
+				"pop": 77366
+			},
+			"source": "https://en.wikipedia.org/wiki/Suva",
+			"checked": "2026-10-25"
+		}
+	},
+	"GH": {
+		"largest": {
+			"value": {
+				"name": "Accra",
+				"lat": 5.55602,
+				"lon": -0.1969,
+				"pop": 1963264
+			},
+			"source": "https://en.wikipedia.org/wiki/Accra",
+			"checked": "2026-10-25"
+		}
+	},
+	"GQ": {
+		"capital": {
+			"value": {
+				"name": "Ciudad de la Paz",
+				"note": "Capital since a decree of 2 January 2026; most government offices are still in Malabo.",
+				"alts": [
+					"Malabo"
+				]
+			},
+			"source": "https://en.wikipedia.org/wiki/Ciudad_de_la_Paz",
+			"checked": "2026-10-25"
+		}
+	},
+	"ID": {
+		"capital": {
+			"value": {
+				"name": "Jakarta",
+				"note": "Nusantara, under construction, is planned to replace it."
+			},
+			"source": "https://en.wikipedia.org/wiki/Nusantara_(city)",
+			"checked": "2026-10-25"
+		}
+	},
+	"IL": {
+		"capital": {
+			"value": {
+				"name": "Jerusalem",
+				"lat": 31.76904,
+				"lon": 35.21633,
+				"note": "Status disputed; most embassies are in Tel Aviv."
+			},
+			"source": "https://en.wikipedia.org/wiki/Status_of_Jerusalem",
+			"checked": "2026-10-25"
+		}
+	},
+	"LC": {
+		"largest": {
+			"value": {
+				"name": "Castries",
+				"lat": 13.9957,
+				"lon": -61.00614,
+				"pop": 20000
+			},
+			"source": "https://en.wikipedia.org/wiki/Castries",
+			"checked": "2026-10-25"
+		}
+	},
+	"MO": {
+		"capital": {
+			"value": {
+				"name": "Macau",
+				"note": "Macau is a city territory without a separate capital."
+			},
+			"source": "https://en.wikipedia.org/wiki/Macau",
+			"checked": "2026-10-25"
+		}
+	},
+	"MT": {
+		"largest": {
+			"value": {
+				"name": "St. Paul's Bay",
+				"lat": 35.95064,
+				"lon": 14.41561,
+				"pop": 32042
+			},
+			"source": "https://en.wikipedia.org/wiki/St._Paul%27s_Bay",
+			"checked": "2026-10-25"
+		}
+	},
+	"MY": {
+		"capital": {
+			"value": {
+				"name": "Kuala Lumpur",
+				"note": "Putrajaya is the administrative centre."
+			},
+			"source": "https://en.wikipedia.org/wiki/List_of_countries_with_multiple_capitals",
+			"checked": "2026-10-25"
+		}
+	},
+	"NL": {
+		"capital": {
+			"value": {
+				"name": "Amsterdam",
+				"note": "The Hague is the seat of government."
+			},
+			"source": "https://en.wikipedia.org/wiki/List_of_countries_with_multiple_capitals",
+			"checked": "2026-10-25"
+		},
+		"largest": {
+			"value": {
+				"name": "Amsterdam",
+				"lat": 52.37403,
+				"lon": 4.88969,
+				"pop": 741636
+			},
+			"source": "https://en.wikipedia.org/wiki/List_of_cities_in_the_Netherlands_by_province",
+			"checked": "2026-10-25"
+		}
+	},
+	"PK": {
+		"largest": {
+			"value": {
+				"name": "Karachi",
+				"lat": 24.8608,
+				"lon": 67.0104,
+				"pop": 11624219
+			},
+			"source": "https://en.wikipedia.org/wiki/List_of_cities_in_Pakistan_by_population",
+			"checked": "2026-10-25"
+		}
+	},
+	"PS": {
+		"capital": {
+			"value": {
+				"name": "Ramallah",
+				"lat": 31.89964,
+				"lon": 35.20422,
+				"note": "Seat of government; East Jerusalem is the proclaimed capital."
+			},
+			"source": "https://en.wikipedia.org/wiki/Ramallah",
+			"checked": "2026-10-25"
+		}
+	},
+	"SA": {
+		"largest": {
+			"value": {
+				"name": "Riyadh",
+				"lat": 24.68773,
+				"lon": 46.72185,
+				"pop": 4205961
+			},
+			"source": "https://en.wikipedia.org/wiki/Riyadh",
+			"checked": "2026-10-25"
+		}
+	},
+	"SZ": {
+		"capital": {
+			"value": {
+				"name": "Mbabane",
+				"note": "Administrative capital. Lobamba is the legislative capital.",
+				"alts": [
+					"Lobamba"
+				]
+			},
+			"source": "https://en.wikipedia.org/wiki/List_of_countries_with_multiple_capitals",
+			"checked": "2026-10-25"
+		}
+	},
+	"ZA": {
+		"capital": {
+			"value": {
+				"name": "Pretoria",
+				"note": "Executive capital. Cape Town is the legislative and Bloemfontein the judicial capital.",
+				"alts": [
+					"Cape Town",
+					"Bloemfontein"
+				]
+			},
+			"source": "https://en.wikipedia.org/wiki/List_of_countries_with_multiple_capitals",
+			"checked": "2026-10-25"
+		}
+	}
+}

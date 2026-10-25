@@ -1,0 +1,219 @@
+{
+	"_comment": "Curated confusable groups (PROMPT.md 7.3). Each tip is one sentence on how to tell them apart, checked against the flag files. Candidates are computed in reports/lookalikes.md; only these groups ship.",
+	"groups": [
+		{
+			"id": "chad-romania",
+			"members": [
+				"TD",
+				"RO",
+				"AD",
+				"MD"
+			],
+			"tip": "Chad's blue is darker than Romania's; Andorra and Moldova add a coat of arms in the middle, Andorra's a shield with two cows, Moldova's an eagle."
+		},
+		{
+			"id": "indonesia-monaco-poland",
+			"members": [
+				"ID",
+				"MC",
+				"PL"
+			],
+			"tip": "Indonesia and Monaco are red over white, Monaco squarer at 4:5; Poland is the other way round, white over red."
+		},
+		{
+			"id": "ireland-cote-divoire-italy",
+			"members": [
+				"IE",
+				"CI",
+				"IT"
+			],
+			"tip": "Ireland has green at the hoist and Côte d'Ivoire has orange there; Italy has red where the orange would be."
+		},
+		{
+			"id": "netherlands-luxembourg-russia-croatia",
+			"members": [
+				"NL",
+				"LU",
+				"RU",
+				"HR"
+			],
+			"tip": "The Netherlands and Luxembourg are red, white and blue, Luxembourg's blue lighter; Russia is white, blue and red, and Croatia is red, white and blue with a chequered shield."
+		},
+		{
+			"id": "nordic-crosses",
+			"members": [
+				"NO",
+				"IS",
+				"DK",
+				"FI",
+				"SE"
+			],
+			"tip": "Norway is a blue cross edged white on red and Iceland swaps the colours; Denmark is a plain white cross on red, Finland a blue cross on white, Sweden a yellow cross on blue."
+		},
+		{
+			"id": "australia-new-zealand",
+			"members": [
+				"AU",
+				"NZ"
+			],
+			"tip": "New Zealand has four red stars edged in white and no large star below the Union Jack; Australia's stars are white, with the big seven-pointed Commonwealth Star."
+		},
+		{
+			"id": "slovenia-slovakia-russia",
+			"members": [
+				"SI",
+				"SK",
+				"RU"
+			],
+			"tip": "All are white, blue and red: Slovenia's small shield with a mountain sits in the upper hoist, Slovakia's larger shield with a double cross sits lower, and Russia has none."
+		},
+		{
+			"id": "senegal-mali-guinea-cameroon",
+			"members": [
+				"SN",
+				"ML",
+				"GN",
+				"CM"
+			],
+			"tip": "Senegal has a green star in the middle and Cameroon a yellow one; Mali has no star, and Guinea reverses the order to red, yellow, green."
+		},
+		{
+			"id": "colombia-ecuador-venezuela",
+			"members": [
+				"CO",
+				"EC",
+				"VE"
+			],
+			"tip": "Colombia and Ecuador have a double-height yellow band, and Ecuador adds a coat of arms; Venezuela's bands are equal, with an arc of white stars."
+		},
+		{
+			"id": "el-salvador-nicaragua-honduras",
+			"members": [
+				"SV",
+				"NI",
+				"HN"
+			],
+			"tip": "Honduras has five blue stars in the middle; El Salvador's emblem is framed by a laurel wreath, Nicaragua's is a triangle inside a ring of text."
+		},
+		{
+			"id": "jordan-palestine-sudan",
+			"members": [
+				"JO",
+				"PS",
+				"SD"
+			],
+			"tip": "Jordan and Palestine have black, white and green bands with a red triangle, and only Jordan's has a white star; Sudan has red, white and black bands with a green triangle."
+		},
+		{
+			"id": "uae-kuwait",
+			"members": [
+				"AE",
+				"KW"
+			],
+			"tip": "The United Arab Emirates has a vertical red band at the hoist; Kuwait has a black trapezoid there instead."
+		},
+		{
+			"id": "egypt-iraq-yemen-syria",
+			"members": [
+				"EG",
+				"IQ",
+				"YE",
+				"SY"
+			],
+			"tip": "Egypt, Iraq and Yemen are red, white and black: Egypt has a gold eagle, Iraq green script, Yemen nothing; Syria's 2025 flag is green, white and black with three red stars."
+		},
+		{
+			"id": "qatar-bahrain",
+			"members": [
+				"QA",
+				"BH"
+			],
+			"tip": "Qatar is maroon with nine white points and much longer; Bahrain is red with five points."
+		},
+		{
+			"id": "niger-india",
+			"members": [
+				"NE",
+				"IN"
+			],
+			"tip": "India has a blue wheel in the middle; Niger has an orange disc and is almost square."
+		},
+		{
+			"id": "liberia-united-states-malaysia",
+			"members": [
+				"LR",
+				"US",
+				"MY"
+			],
+			"tip": "The United States has 50 stars and 13 stripes, Liberia a single star and 11 stripes, Malaysia a yellow crescent and star with 14 stripes."
+		},
+		{
+			"id": "haiti-liechtenstein",
+			"members": [
+				"HT",
+				"LI"
+			],
+			"tip": "Both are blue over red: Haiti has a coat of arms on a white panel in the middle, Liechtenstein a gold crown in the upper hoist."
+		},
+		{
+			"id": "austria-latvia-lebanon",
+			"members": [
+				"AT",
+				"LV",
+				"LB"
+			],
+			"tip": "Austria is bright red with an equal white band, Latvia dark carmine with a narrow white band, and Lebanon has a green cedar in the middle."
+		},
+		{
+			"id": "belgium-germany",
+			"members": [
+				"BE",
+				"DE"
+			],
+			"tip": "Belgium's black, yellow and red bands are vertical, black at the hoist; Germany's are horizontal, black on top."
+		},
+		{
+			"id": "hungary-italy-tajikistan-bulgaria",
+			"members": [
+				"HU",
+				"IT",
+				"TJ",
+				"BG"
+			],
+			"tip": "Hungary is red, white, green across; Italy green, white, red upright; Tajikistan is red, white, green across with a crown and stars; Bulgaria white, green, red across."
+		},
+		{
+			"id": "ghana-bolivia-guinea-bissau",
+			"members": [
+				"GH",
+				"BO",
+				"GW"
+			],
+			"tip": "Ghana has a black star in the middle and Bolivia plain red, yellow and green bands; Guinea-Bissau has a vertical red band with a black star at the hoist."
+		},
+		{
+			"id": "turkiye-tunisia",
+			"members": [
+				"TR",
+				"TN"
+			],
+			"tip": "Türkiye's crescent and star stand free on the red, nearer the hoist; Tunisia's sit inside a white disc in the middle."
+		},
+		{
+			"id": "fiji-tuvalu",
+			"members": [
+				"FJ",
+				"TV"
+			],
+			"tip": "Both are light blue with the Union Jack: Fiji has a shield on the fly, Tuvalu nine yellow stars."
+		},
+		{
+			"id": "italy-mexico",
+			"members": [
+				"IT",
+				"MX"
+			],
+			"tip": "Mexico has an eagle on a cactus in the middle and darker green; Italy's green, white and red bands are plain."
+		}
+	]
+}

@@ -1,0 +1,24 @@
+{
+	"_comment": "Optional pack, off by default: widely seen territories with their own flags (PROMPT.md 7.1).",
+	"countries": [
+		"GL",
+		"PR",
+		"HK",
+		"MO",
+		"FO",
+		"BM",
+		"GI",
+		"AW",
+		"CW",
+		"KY",
+		"VG",
+		"VI",
+		"GU",
+		"AS",
+		"PF",
+		"IM",
+		"JE",
+		"GG",
+		"CK"
+	]
+}

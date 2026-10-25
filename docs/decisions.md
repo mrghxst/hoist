@@ -58,3 +58,66 @@ real 404 status with the styled error page.
 **Lighthouse locally** uses Playwright's Chromium via `CHROME_PATH`. In CI the
 runner's Chrome is used. Lighthouse 12 has no `mobile` preset; the default
 settings are the mobile emulation the brief asks for.
+
+## M1
+
+**Flag files come from the Wikipedia infobox.** `pnpm data --discover` reads
+`image_flag` from each country's English Wikipedia infobox and writes the
+Commons file name to `data/flag-sources.json`, which is then reviewed and
+committed. Several infobox files are variants with exact colours or
+proportions (`Flag of the United Kingdom (1-2).svg`, `Flag of Canada
+(Pantone).svg`, `Flag of Iran (official).svg`). Honduras uses `Flag of
+Honduras (1949–2022, 2026–present).svg`, matching its 2026 return to the
+earlier flag.
+
+**Afghanistan shows the flag used in the country today.** The Wikipedia
+infobox uses the Islamic Emirate's white flag (`Flag of Taliban.svg`), so the
+quiz does too, following the brief's rule for choosing files. The flag page
+will add one neutral line: the black, red and green tricolour of 2013–2021 is
+still used at the United Nations and by some embassies. This is a judgement
+call the owner may want to revisit.
+
+**Equatorial Guinea's capital is Ciudad de la Paz.** GeoNames marks it as the
+capital, and a presidential decree of 2 January 2026 moved the capital there
+from Malabo (Wikipedia, Financial Afrik, checked 2026-10-25). mledoze 5.1.0
+still says Malabo. The override shows Ciudad de la Paz with a note that most
+government offices are still in Malabo, and the capitals mode accepts both.
+
+**Qatar's proportions come from width/height.** Its Commons file stretches a
+75×18 viewBox to 1400×550 with `preserveAspectRatio="none"`. The ratio rule
+is "viewBox, unless the root stretches it", which gives Qatar 28:11.
+
+**SVGO precision is chosen per flag.** Each flag is optimised at 1, 2, then
+3 decimal places, and the first result whose render matches the original
+(mean difference ≤ 1.5/255 at 160 px and ≤ 0.3/255 at 480 px, via resvg)
+ships. This brought the whole set from 2.9 MB to 1.76 MB. Pakistan needed the
+conservative preset. The WebP fallbacks use quality 72 at 960 px.
+
+**Detail geometry is quantised at 1e6.** At 1e5, Vatican City collapsed to a
+zero-area line, so no point could be inside it. 1e6 with 28% simplification
+gives 518 KB gzipped (target 600 KB). The overview uses 1e5 and 6% (102 KB).
+
+**Translations live in their own file.** `translations.json` (23 languages;
+mledoze 5.1.0 has no Breton, so 23 rather than 24) is separate from
+`countries.json`, so the play page only loads it when the player turns on
+"Also accept names in".
+
+**New Caledonia is left out of the territories pack.** Its infobox image shows
+two flags side by side (ratio 3.5), and choosing one would be a political
+statement.
+
+**Populations are GeoNames figures**, also for overridden largest cities
+(city proper, sometimes outdated). They are credited to GeoNames.
+
+**Difficulty is estimated.** There is no usage data yet, so: 40 hand-picked
+familiar flags are easy (`data/starter.json`); countries in the top 110 by
+population that are in no lookalike group, or in the top 50 overall, are
+medium; the rest are hard. That gives 40 / 54 / 103.
+
+**More lookalike groups.** The candidate report surfaced Türkiye/Tunisia
+(distance 0.098), Fiji/Tuvalu and Italy/Mexico, which were added with tips.
+
+**`tiny` uses a phone-sized globe.** A country is `tiny` when its main
+landmass is under 20 px across at its framed zoom on a 170 px-radius globe.
+That is 39 countries, including Cyprus, Kosovo and Luxembourg; the globe also
+checks the real on-screen size at run time.

@@ -1,0 +1,10 @@
+{
+	"_comment": "starter: the ten well-known flags of the first-visit round (PROMPT.md 2.2), in order. familiar: flags most people already know, rated easy for the daily mix and introduced first in Learn new (7.2). Difficulty for the rest is estimated, see docs/decisions.md.",
+	"starter": ["JP", "BR", "CA", "DE", "US", "GB", "FR", "CN", "KR", "CH"],
+	"familiar": [
+		"JP", "BR", "CA", "DE", "US", "GB", "FR", "CN", "KR", "CH",
+		"IT", "ES", "MX", "IN", "AU", "SE", "GR", "TR", "IL", "AR",
+		"ZA", "IE", "PT", "NL", "RU", "NP", "JM", "DK", "NO", "FI",
+		"PL", "UA", "SA", "EG", "KE", "NG", "LB", "PK", "CU", "BE"
+	]
+}

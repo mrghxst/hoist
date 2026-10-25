@@ -4,7 +4,7 @@ module.exports = {
 		collect: {
 			staticDistDir: './build',
 			url: ['http://localhost/index.html'],
-			numberOfRuns: 1,
+			numberOfRuns: 3,
 			settings: { chromeFlags: '--headless=new' }
 		},
 		assert: {

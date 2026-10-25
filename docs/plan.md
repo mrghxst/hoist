@@ -13,13 +13,17 @@ building. Choices the brief does not cover are in [decisions.md](decisions.md).
 - [x] Lighthouse 100 / 100 / 100 / 100 on the empty play page (LCP 1.36 s)
 - [ ] Deploy: waiting on the owner (see "Owner steps")
 
-## M1: Data pipeline
-- [ ] Countries (mledoze 5.1.0), set-197, aliases
-- [ ] Flags from Commons, SVGO, hashed names, WebP fallbacks
-- [ ] Capitals and largest cities (GeoNames) with overrides
-- [ ] Geometry (Natural Earth 5.1.2) overview + detail, land dots, views
-- [ ] Lookalike candidates report
-- [ ] Audits and reports
+## M1: Data pipeline (done 2026-10-25)
+- [x] Countries (mledoze 5.1.0), set-197, aliases, self-designations
+- [x] Flags from the Wikipedia infobox files on Commons, SVGO with a visual
+      check, hashed names, WebP fallbacks (1.76 MB in all)
+- [x] Capitals and largest cities (GeoNames) with sourced overrides
+- [x] Geometry (Natural Earth 5.1.2): overview 102 KB, detail 518 KB, land
+      dots 22 KB (all gzipped), views from the main landmass
+- [x] Lookalike candidates report; 24 curated groups
+- [x] Audits (4,256 checks, 0 errors) and reports, reviewed
+- [x] `pnpm data` from an empty `data/raw` (240 s), spot checks, Syria 2025,
+      Nepal not a rectangle, Qatar 28:11
 
 ## M2: The globe
 - [ ] Look (glass body, far side, dots, solid land, graticule, rim, halo)
