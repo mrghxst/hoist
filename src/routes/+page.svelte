@@ -3,9 +3,10 @@
 	import { BRAND, TAGLINE } from '#lib/brand.ts';
 	import GlobeView, { type Markers, type Target } from '#lib/ui/GlobeView.svelte';
 	import FlagImage from '#lib/ui/FlagImage.svelte';
-	import Shortcuts from '#lib/ui/Shortcuts.svelte';
+	import { afterFirstPaint } from '#lib/ui/after-paint.ts';
+	import type ShortcutsDialog from '#lib/ui/Shortcuts.svelte';
 	import { loadGame } from '#lib/play/load.ts';
-	import { Game, ListDeck, ShuffleDeck } from '#lib/play/game.svelte.ts';
+	import type { Game } from '#lib/play/game.svelte.ts';
 	import { readSettings, writeSettings } from '#lib/store/storage.ts';
 	import type { GameCountry, GameData } from '#lib/data/types.ts';
 
@@ -21,7 +22,12 @@
 	];
 
 	let game = $state<Game | null>(null);
+	// The quiz engine and the keys dialog load after first paint (PROMPT.md 10).
+	let engine: typeof import('#lib/play/game.svelte.ts') | undefined;
+	let Shortcuts = $state<typeof ShortcutsDialog>();
 	let loadError = $state(false);
+	let pendingSubmit = false;
+	let hydrated = $state(false);
 	let showHelp = $state(false);
 	let started = $state(false);
 	let innerWidth = $state(1440);
@@ -73,8 +79,12 @@
 	}
 
 	onMount(() => {
-		loadGame()
-			.then((d) => {
+		hydrated = true;
+		afterFirstPaint()
+			.then(() => Promise.all([loadGame(), import('#lib/play/game.svelte.ts')]))
+			.then(([d, m]) => {
+				engine = m;
+				const { Game, ListDeck, ShuffleDeck } = m;
 				const scope = readSettings().scope;
 				// `?deck=CD,CG` plays a fixed list (used by the end-to-end tests).
 				const forced = new URLSearchParams(location.search).get('deck');
@@ -82,7 +92,13 @@
 				if (forced) g.start(new ListDeck('Practice', forced.split(',').filter((id) => d.countries.some((c) => c.id === id))));
 				else if (typeof scope === 'string') g.start(new ShuffleDeck(labelFor(scope), scopeIds(d, scope)));
 				else g.start();
+				// Keep anything typed while the data was loading.
+				if (input?.value) g.input = input.value;
 				game = g;
+				if (pendingSubmit) {
+					pendingSubmit = false;
+					submit();
+				}
 			})
 			.catch(() => (loadError = true));
 
@@ -101,10 +117,10 @@
 	});
 
 	function pickScope(scope: string) {
-		if (!game) return;
+		if (!game || !engine) return;
 		writeSettings({ scope });
 		right = 0;
-		game.start(new ShuffleDeck(labelFor(scope), scopeIds(game.data, scope)));
+		game.start(new engine.ShuffleDeck(labelFor(scope), scopeIds(game.data, scope)));
 		focusInput();
 	}
 
@@ -128,7 +144,8 @@
 
 	function submit(e?: SubmitEvent) {
 		e?.preventDefault();
-		if (!game) return;
+		// Enter before the quiz data arrived: check once it has.
+		if (!game) return void (pendingSubmit = true);
 		if (game.phase === 'done') return next();
 		const before = game.wrongCount;
 		game.submit();
@@ -184,6 +201,16 @@
 		}
 	}
 
+	$effect(() => {
+		if (showHelp && !Shortcuts) import('#lib/ui/Shortcuts.svelte').then((m) => (Shortcuts = m.default));
+	});
+
+	// The field is uncontrolled until the game exists, so hydration keeps what
+	// was typed early; after that the game's text (hints, the next flag) wins.
+	$effect(() => {
+		if (game && input && input.value !== game.input) input.value = game.input;
+	});
+
 	let announce = $derived.by(() => {
 		if (!answered || !current || !outcome) return '';
 		const verdict = outcome.correct ? 'Right.' : outcome.gaveUp ? 'The answer:' : 'Not quite.';
@@ -198,9 +225,6 @@
 		name="description"
 		content="See a flag, type the country, and a glass globe flies there. Spaced repetition, a daily challenge, no account."
 	/>
-	<link rel="preload" href={data.gameUrl} as="fetch" crossorigin="anonymous" />
-	<link rel="preload" href="/geo/overview.topo.json" as="fetch" crossorigin="anonymous" />
-	<link rel="preload" href="/geo/land-dots.bin" as="fetch" crossorigin="anonymous" />
 </svelte:head>
 
 <svelte:window bind:innerWidth onkeydown={onKeydown} />
@@ -251,12 +275,10 @@
 						src={current.flag}
 						ratio={current.ratio}
 						alt={answered ? `Flag of ${current.name}` : 'Flag to name'}
-						maxWidth={wide ? 288 : 300}
-						maxHeight={wide ? 184 : 140}
 						eager
 					/>
 				{:else}
-					<FlagImage src={data.first.flag} ratio={data.first.ratio} alt="Flag to name" maxWidth={wide ? 288 : 300} maxHeight={wide ? 184 : 140} eager />
+					<FlagImage src={data.first.flag} ratio={data.first.ratio} alt="Flag to name" eager />
 				{/if}
 			</figure>
 
@@ -272,12 +294,12 @@
 						</div>
 					</div>
 				{:else}
-					<form class="field" class:shake onsubmit={submit} onanimationend={() => (shake = false)}>
+					<!-- method="dialog": Enter before hydration does nothing instead of reloading. -->
+						<form method="dialog" class="field" class:shake onsubmit={submit} onanimationend={() => (shake = false)} data-hydrated={hydrated}>
 						<label class="visually-hidden" for="answer">Country name</label>
 						<input
 							id="answer"
 							bind:this={input}
-							value={game?.input ?? ''}
 							oninput={(e) => {
 								if (game) game.input = e.currentTarget.value;
 							}}
@@ -286,9 +308,9 @@
 							autocapitalize="words"
 							spellcheck="false"
 							enterkeyhint={phase === 'done' ? 'next' : 'go'}
-							placeholder={game ? 'Type the country' : 'Loading flags…'}
+							placeholder="Type the country"
 							aria-describedby="keys"
-							disabled={!game}
+							aria-busy={!game}
 						/>
 						<button class="enter" type="submit" aria-label={phase === 'done' ? 'Next flag' : 'Check'}>
 							<kbd>⏎</kbd>
@@ -350,7 +372,7 @@
 	{/if}
 
 	<div class="visually-hidden" aria-live="polite">{announce}</div>
-	<Shortcuts bind:open={showHelp} />
+	{#if Shortcuts}<Shortcuts bind:open={showHelp} />{/if}
 </div>
 
 <style>
@@ -406,6 +428,8 @@
 	}
 
 	.flag-card {
+		--flag-w: 288px;
+		--flag-h: 184px;
 		margin: 0;
 		height: 208px;
 		display: grid;
@@ -681,6 +705,8 @@
 		}
 
 		.flag-card {
+			--flag-w: 300px;
+			--flag-h: 128px;
 			height: 152px;
 		}
 
@@ -710,6 +736,7 @@
 	/* With the keyboard open there is little room: shrink the flag. */
 	@media (max-width: 899px) and (max-height: 620px) {
 		.flag-card {
+			--flag-h: 76px;
 			height: 96px;
 		}
 	}

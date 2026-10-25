@@ -5,6 +5,7 @@
 
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { afterFirstPaint } from './after-paint.ts';
 
 	interface Props {
 		target?: Target | null;
@@ -49,6 +50,10 @@
 
 		(async () => {
 			try {
+				// Let the page paint first: the flag and the field are what matter
+				// for the first frame, the globe fades in after.
+				await afterFirstPaint();
+				if (disposed) return;
 				const [{ Globe }, data] = await Promise.all([
 					import('#lib/globe/Globe.ts'),
 					import('#lib/globe/data.ts')

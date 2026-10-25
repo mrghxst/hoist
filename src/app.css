@@ -1,16 +1,39 @@
 /* Geist, self-hosted and subset to Latin (scripts/fonts/subset.sh). */
 @font-face {
 	font-family: 'Geist';
-	src: url('/fonts/geist-1.8.2-latin.woff2') format('woff2');
-	font-weight: 100 900;
+	src: url('/fonts/geist-1.8.2-latin-wght400-600.woff2') format('woff2');
+	font-weight: 400 600;
 	font-style: normal;
 	font-display: swap;
+	unicode-range: U+0000-00FF, U+2010-2027, U+2030-203A, U+20AC, U+2122, U+2190-2193, U+2212, U+2215, U+2713, U+2717, U+23CE, U+FEFF, U+FFFD;
+}
+
+/* Latin Extended: only fetched when a page shows such a letter. */
+@font-face {
+	font-family: 'Geist';
+	src: url('/fonts/geist-1.8.2-latin-ext-wght400-600.woff2') format('woff2');
+	font-weight: 400 600;
+	font-style: normal;
+	font-display: swap;
+	unicode-range: U+0100-017F, U+0218-021B, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-200F, U+2028-202F, U+203B-206F, U+2605;
+}
+
+/* Arial (or Liberation Sans, same metrics) scaled to Geist's width and line
+   metrics, so swapping in Geist moves nothing (CLS 0). Values from the font
+   files: size from letter-frequency-weighted advance widths. */
+@font-face {
+	font-family: 'Geist Fallback';
+	src: local('Arial'), local('ArialMT'), local('Liberation Sans'), local('Helvetica');
+	size-adjust: 106.11%;
+	ascent-override: 94.71%;
+	descent-override: 27.8%;
+	line-gap-override: 0%;
 }
 
 @font-face {
 	font-family: 'Geist Mono';
-	src: url('/fonts/geist-mono-1.8.2-latin.woff2') format('woff2');
-	font-weight: 100 900;
+	src: url('/fonts/geist-mono-1.8.2-latin-wght400-600.woff2') format('woff2');
+	font-weight: 400 600;
 	font-style: normal;
 	font-display: swap;
 }
@@ -26,7 +49,7 @@
 	--danger: #ee0000;
 	--accent: #0070f3;
 	--overlay: rgba(0, 0, 0, 0.12);
-	--sans: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+	--sans: 'Geist', 'Geist Fallback', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 	--mono: 'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
 	--t13: 13px;
 	--t14: 14px;
@@ -237,15 +260,46 @@ textarea {
 	opacity: 0.88;
 }
 
+/* Keycaps use the sans face: the mono file then stays off the first paint. */
 kbd {
-	font-family: var(--mono);
+	font-family: var(--sans);
 	font-size: 12px;
+	font-weight: 500;
+	font-variant-numeric: tabular-nums;
 	padding: 1px 6px;
 	border: 1px solid var(--border);
 	border-bottom-width: 2px;
 	border-radius: 4px;
 	background: var(--surface);
 	color: var(--muted);
+}
+
+/* The error page. Its styles live here, not in +error.svelte: SvelteKit
+   loads that page on every start, and a component style would add a CSS
+   request before first paint. */
+.error-page {
+	min-height: calc(100dvh - var(--bar-h) - 48px);
+	display: grid;
+	place-items: center;
+	padding: 0 16px 48px;
+}
+.error-page .card {
+	width: min(560px, 100%);
+	padding: 40px 32px;
+	text-align: center;
+	display: grid;
+	gap: 12px;
+	justify-items: center;
+}
+.error-page .code {
+	font-family: var(--mono);
+	color: var(--muted);
+	font-size: var(--t13);
+}
+.error-page .actions {
+	display: flex;
+	gap: 8px;
+	margin-top: 8px;
 }
 
 @media (prefers-reduced-motion: reduce) {

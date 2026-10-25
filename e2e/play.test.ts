@@ -13,8 +13,9 @@ const STARTER: [string, string][] = [
 	['CH', 'Switzerland']
 ];
 
+// The field takes typing at once; the quiz data arrives after first paint.
 async function ready(page: Page) {
-	await expect(page.locator('#answer')).toBeEnabled();
+	await expect(page.locator('#answer')).toHaveAttribute('aria-busy', 'false');
 }
 
 test.beforeEach(async ({ page }) => {
@@ -123,4 +124,61 @@ test('? opens the keyboard help', async ({ page }) => {
 	await expect(page.getByRole('dialog', { name: 'Keyboard' })).toBeVisible();
 	await page.keyboard.press('Escape');
 	await expect(page.getByRole('dialog', { name: 'Keyboard' })).toBeHidden();
+});
+
+test('typing and Enter before the quiz data arrives still count', async ({ page }) => {
+	await page.route('**/game.*.json', async (route) => {
+		await new Promise((r) => setTimeout(r, 800));
+		await route.continue();
+	});
+	await page.goto('/');
+	await expect(page.locator('form.field')).toHaveAttribute('data-hydrated', 'true');
+	const field = page.locator('#answer');
+	await expect(field).toHaveAttribute('aria-busy', 'true');
+	await field.fill('Japan');
+	await field.press('Enter');
+	await expect(page.locator('.verdict')).toContainText('Japan');
+	await expect(page.locator('.verdict')).toContainText('✓');
+});
+
+test('the console stays above the on-screen keyboard', async ({ page }, info) => {
+	test.skip(info.project.name !== 'phone', 'phones only');
+	// Chromium cannot open a virtual keyboard here, so stand in for the
+	// visual viewport: the keyboard covers the bottom 300 px.
+	await page.addInitScript(() => {
+		const target = new EventTarget();
+		const vv = Object.assign(target, { height: innerHeight, width: innerWidth, offsetTop: 0, offsetLeft: 0, scale: 1 });
+		Object.defineProperty(window, 'visualViewport', { get: () => vv });
+		(window as unknown as { __keyboard: (px: number) => void }).__keyboard = (px) => {
+			vv.height = innerHeight - px;
+			target.dispatchEvent(new Event('resize'));
+		};
+	});
+	await page.goto('/');
+	await ready(page);
+	await page.locator('#answer').focus();
+	await page.evaluate(() => (window as unknown as { __keyboard: (px: number) => void }).__keyboard(300));
+	const viewport = page.viewportSize()!;
+	await expect
+		.poll(async () => (await page.locator('.console').boundingBox())!.y + (await page.locator('.console').boundingBox())!.height)
+		.toBeLessThanOrEqual(viewport.height - 300);
+	const field = (await page.locator('#answer').boundingBox())!;
+	expect(field.y).toBeGreaterThanOrEqual(0);
+});
+
+test('text typed before the page hydrates is kept', async ({ page }) => {
+	await page.route('**/_app/immutable/nodes/2.*.js', async (route) => {
+		await new Promise((r) => setTimeout(r, 800));
+		await route.continue();
+	});
+	await page.goto('/', { waitUntil: 'commit' });
+	const field = page.locator('#answer');
+	await field.fill('Jap');
+	await expect(page.locator('form.field')).toHaveAttribute('data-hydrated', 'true');
+	await ready(page);
+	await expect(field).toHaveValue('Jap');
+	await field.press('End');
+	await page.keyboard.type('an');
+	await page.keyboard.press('Enter');
+	await expect(page.locator('.verdict')).toContainText('✓');
 });

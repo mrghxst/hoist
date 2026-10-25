@@ -32,7 +32,13 @@ pnpm fonts            # re-subset Geist (needs Python fonttools + brotli)
   `#lib/ui/TopBar.svelte`.
 - `tsconfig.json` must extend `$app/tsconfig` and keep `$app/types` in `types`.
 - `output.preloadStrategy` was removed. Bundles are split (the default):
-  `single` would inline the lazy globe chunk into the initial JS.
+  `single` would inline the lazy globe chunk into the initial JS. A rolldown
+  `codeSplitting` group in `vite.config.ts` puts the code every page needs
+  into one chunk, and `scripts/postbuild.mjs` (run by `pnpm build`) adds a
+  modulepreload for SvelteKit's root error page.
+- Anything not needed for the first frame (globe, geometry, quiz data, quiz
+  engine) starts after `afterFirstPaint()` (`#lib/ui/after-paint.ts`). Do not
+  preload it in `<head>`: Lighthouse counts it against LCP.
 - Quiz data is fetched (`#lib/data/game.json?url`), not imported, so it stays
   out of the play page's JavaScript. Pages that need full data read it in
   `+page.server.ts` at prerender time.

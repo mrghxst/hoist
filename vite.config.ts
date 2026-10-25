@@ -11,12 +11,23 @@ export default defineConfig({
 				entries: ['*'],
 				handleHttpError: 'fail'
 			},
-			inlineStyleThreshold: 8192
+			inlineStyleThreshold: 16384
 		})
 	],
 	build: {
 		target: 'es2022',
-		assetsInlineLimit: 0
+		assetsInlineLimit: 0,
+		rolldownOptions: {
+			output: {
+				// One chunk for the code that every page needs at first paint (the
+				// Svelte runtime, layout): fewer requests on a cold load. Code used
+				// by one page stays with it; the globe stays a lazy chunk.
+				// SvelteKit finds its runtime by that chunk, so it stays apart.
+				codeSplitting: {
+					groups: [{ name: 'app', tags: ['$initial'], minShareCount: 2, test: (id) => !/kit[\\/]src[\\/]runtime[\\/]client[\\/]/.test(id) }]
+				}
+			}
+		}
 	},
 	test: {
 		include: ['tests/**/*.test.ts'],

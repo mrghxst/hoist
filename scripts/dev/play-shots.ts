@@ -14,7 +14,7 @@ for (const scheme of ['light', 'dark'] as const) {
 		const tag = `${w}-${scheme}`;
 		const page = await browser.newPage({ viewport: { width: w, height: h }, colorScheme: scheme, deviceScaleFactor: w < 500 ? 2 : 1 });
 		await page.goto(`${base}/?test&deck=CH,NG,CD`);
-		await page.locator('#answer:enabled').waitFor();
+		await page.locator('#answer[aria-busy="false"]').waitFor();
 		await page.waitForTimeout(1200);
 		await page.screenshot({ path: `${out}/${tag}-0-ask.png` });
 		await page.locator('#answer').fill('Switzerland');
@@ -33,5 +33,18 @@ for (const scheme of ['light', 'dark'] as const) {
 		await page.screenshot({ path: `${out}/${tag}-3-chips.png` });
 		await page.close();
 	}
+	// Phone with the on-screen keyboard open: about 300 px less height.
+	const page = await browser.newPage({ viewport: { width: 375, height: 512 }, colorScheme: scheme, deviceScaleFactor: 2 });
+	await page.goto(`${base}/?test&deck=NP,QA`);
+	await page.locator('#answer[aria-busy="false"]').waitFor();
+	await page.locator('#answer').focus();
+	await page.keyboard.type('Nep');
+	await page.waitForTimeout(1200);
+	await page.screenshot({ path: `${out}/375kb-${scheme}-0-ask.png` });
+	await page.keyboard.type('al');
+	await page.keyboard.press('Enter');
+	await page.waitForTimeout(1900);
+	await page.screenshot({ path: `${out}/375kb-${scheme}-1-right.png` });
+	await page.close();
 }
 await browser.close();

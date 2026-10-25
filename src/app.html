@@ -6,8 +6,9 @@
 		<meta name="color-scheme" content="light dark" />
 		<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
 		<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
-		<link rel="preload" href="%sveltekit.assets%/fonts/geist-1.8.2-latin.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
-		<link rel="icon" href="%sveltekit.assets%/favicon.svg" type="image/svg+xml" />
+		<link rel="preload" href="%sveltekit.assets%/fonts/geist-1.8.2-latin-wght400-600.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
+		<!-- The icon inline (same as static/favicon.svg): one request fewer before first paint. -->
+		<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Cstyle%3Epath,rect%7Bfill:%23000%7D%40media (prefers-color-scheme:dark)%7Bpath,rect%7Bfill:%23fff%7D%7D%3C/style%3E%3Crect x=%226%22 y=%223%22 width=%222.6%22 height=%2226%22 rx=%221.3%22/%3E%3Cpath d=%22M10 5h16l-3.8 5.7L26 16.4H10z%22/%3E%3C/svg%3E" type="image/svg+xml" />
 		<script>
 			// Apply the saved theme before first paint, so there is no flash.
 			try {

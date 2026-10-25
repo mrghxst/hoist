@@ -178,3 +178,56 @@ focusable canvas cannot also be `role="img"`.
 
 **`?deck=CD,CG`** plays a fixed list of flags. The end-to-end tests use it to
 reach specific flags; it reveals nothing the player does not see anyway.
+
+### Getting the play page to Lighthouse 100 and LCP ≤ 1.5 s
+
+Lighthouse's mobile score is simulated (Lantern): it takes every request that
+started before the observed first paint and replays it on a slow 4G link
+with 6 connections. In its headless Chrome the first frame lands at about
+450 ms whatever the page does, so anything requested in that window counts
+against FCP and LCP. With the globe and data preloaded, LCP came out at
+3.0 s. What fixed it, in order of effect:
+
+- **Heavy work starts after first contentful paint** (`afterFirstPaint()` in
+  `src/lib/ui/after-paint.ts`, a `PerformanceObserver` with a 1.5 s
+  fallback): the globe module, the geometry, the quiz data and the quiz
+  engine. The brief's tactic "preload the overview geometry" now means
+  "fetch it right after first paint", not `<link rel="preload">` in `<head>`:
+  a head preload competes with the first paint.
+- **The input placeholder is fixed** ("Type the country"). It was "Loading
+  flags…" until the data arrived, which made a second, late LCP.
+- **The field takes typing at once.** It is uncontrolled until the game
+  exists, so what was typed before hydration or before the data survives;
+  Enter pressed early is checked once the data is in; `method="dialog"`
+  makes an Enter before hydration a no-op instead of a page reload. The
+  field has `aria-busy` while loading.
+- **Flags are sized by CSS** (`--flag-w`, `--flag-h` per breakpoint), not by
+  a JavaScript width check, so the prerendered HTML is right on phones. The
+  phone flag was resized on hydration: a 0.006 layout shift.
+- **SvelteKit's root error page is preloaded** with the other modules
+  (`scripts/postbuild.mjs`). SvelteKit imports it on every start but only
+  finds it after its runtime loaded, the last link in the chain. Its styles
+  moved to `app.css` so it brings no CSS file.
+- **One shared chunk** for the code every page needs at first paint
+  (rolldown `codeSplitting` group: initial modules used by two or more
+  entries, SvelteKit's runtime kept apart because SvelteKit looks it up).
+  13 JS files became 6.
+- **Fonts:** the weight axis is cut to 400–600, the only weights used (still
+  variable). Geist is split with `unicode-range`: a 17.4 KB core (Latin-1,
+  punctuation, the UI symbols) that is preloaded, and an 8.4 KB Latin
+  Extended file fetched only when such a letter shows. Keycaps use Geist,
+  not Geist Mono, so the mono file is not needed for the first screen; the
+  brief only asks for tabular numbers, which Geist has. A metric-matched
+  fallback face (`Geist Fallback`, Arial or Liberation Sans scaled to
+  Geist's widths and line metrics) keeps a late font swap from moving text.
+- **The favicon is inline** (a data URI), one request fewer.
+
+Result: Performance, Accessibility, Best Practices and SEO 100; LCP 1.36 s,
+CLS 0, TBT 90 ms; play page initial JS 42.8 KB gzipped.
+
+**On-screen keyboard check.** Chromium cannot open a virtual keyboard under
+test, so the e2e test stands in a fake `visualViewport` that shrinks by
+300 px and checks the console's bottom edge stays above it. Screenshots at
+375×512 (812 minus a keyboard) were reviewed in light and dark. On short
+screens the flag card is 96 px and the flag fits inside it (it overflowed
+before).

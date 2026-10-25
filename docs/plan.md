@@ -37,15 +37,17 @@ building. Choices the brief does not cover are in [decisions.md](decisions.md).
       and phone screenshots
 - [x] Frame times 2.5 ms (budget 6), 10.1 ms at 4× throttle (budget 14)
 
-## M3: The core loop (in progress)
+## M3: The core loop (done 2026-10-25)
 - [x] Flag card, answer field, matching (208 cases), result, globe reveal
 - [x] Hints (Tab), give up (Esc), "Which one?" chips (number keys), `?` help
 - [x] Keyboard loop; e2e: full starter round, wrong then right, Congo chips,
       typo accepted, no answer in the DOM, first flag in the HTML
 - [x] Starter round for first visits, then "Learn all 197" or a region
 - [x] Desktop and 375 px screenshots in light and dark reviewed
-- [ ] Check the phone layout with the on-screen keyboard open (visualViewport)
-- [ ] Re-run Lighthouse on the real play page (LCP with the globe)
+- [x] Phone layout with the on-screen keyboard open: e2e with a stand-in
+      visualViewport, screenshots at 375×512 in light and dark
+- [x] Lighthouse on the real play page: 100 / 100 / 100 / 100, LCP 1.36 s,
+      CLS 0 (was LCP 3.0 s; see decisions)
 
 ## M4: Learning engine
 - [ ] FSRS, grading, queue rules

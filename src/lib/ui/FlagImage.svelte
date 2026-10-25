@@ -7,7 +7,11 @@
 		src: string;
 		ratio: number;
 		alt: string;
-		/** Largest box the flag may fill, in px. */
+		/**
+		 * Largest box the flag may fill, in px. A parent can override it from
+		 * CSS with `--flag-w` and `--flag-h` (media queries), so the size in the
+		 * prerendered HTML is already right on every screen (CLS 0).
+		 */
 		maxWidth?: number;
 		maxHeight?: number;
 		eager?: boolean;
@@ -25,7 +29,9 @@
 	{alt}
 	width={Math.round(w)}
 	height={Math.round(h)}
-	style:width="{w}px"
+	style:--r={ratio}
+	style:--mw="{maxWidth}px"
+	style:--mh="{maxHeight}px"
 	style:aspect-ratio={ratio}
 	loading={eager ? 'eager' : 'lazy'}
 	fetchpriority={eager ? 'high' : 'auto'}
@@ -36,6 +42,7 @@
 <style>
 	.flag {
 		display: block;
+		width: min(var(--flag-w, var(--mw)), calc(var(--flag-h, var(--mh)) * var(--r)));
 		max-width: 100%;
 		height: auto;
 		border-radius: 2px;
