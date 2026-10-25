@@ -89,11 +89,17 @@ building. Choices the brief does not cover are in [decisions.md](decisions.md).
       answer with the setting on
 - [x] Lighthouse 100 / 100 / 100 / 100, LCP 1.4 s; initial JS 47.5 KB
 
-## M7: Polish and launch
-- [ ] Accessibility, performance, copy and visual passes
-- [ ] Error states (storage blocked, geometry failed), 404, weekly
-      flag-update workflow
-- [ ] README with screenshots
+## M7: Polish and launch (done 2026-10-25)
+- [x] Accessibility pass: axe (WCAG 2.1 AA and best practices) clean on every
+      page in both themes at 375 and 1440 px; 200% zoom (640 px) checked
+- [x] Performance pass: Lighthouse 100 / 100 / 100 / 100 on the play page and
+      a flag page (`pnpm lighthouse`), LCP 1.4 s, TBT 10 ms; initial JS 47.5 KB;
+      the globe no longer turns on machines without a GPU
+- [x] Visual pass in both themes at 375, 768, 1024 and 1440 px (tablet globe
+      size, zoom controls clear of the console); copy pass
+- [x] Error states: storage blocked, map failed to load (e2e); 404
+- [x] Weekly flag-update workflow (`.github/workflows/flags.yml`)
+- [x] README with screenshots (`scripts/dev/readme-shots.ts`)
 
 ## Owner steps
 

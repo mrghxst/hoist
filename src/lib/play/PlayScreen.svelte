@@ -736,6 +736,14 @@
 	}
 
 	/* With the keyboard open there is little room: shrink the flag. */
+	/* Tall tablets: the globe takes all the room above the console, not a
+	   45% band with a gap under it. */
+	@media (min-width: 600px) and (max-width: 899px) and (min-height: 900px) {
+		.stage {
+			height: calc(100dvh - var(--bar-h) - 290px);
+		}
+	}
+
 	@media (max-width: 899px) and (max-height: 620px) {
 		.flag-card {
 			--flag-h: 76px;

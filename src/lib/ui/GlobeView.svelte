@@ -234,11 +234,19 @@
 		background: var(--overlay);
 	}
 
-	/* On phones the console can grow over the bottom of the globe. */
-	@media (max-width: 899px) {
+	/* Below 1200 px the console (860 px wide on desktops, full width on
+	   phones) can reach the bottom corners, so the controls go to the top. */
+	@media (max-width: 1199px) {
 		.controls {
 			top: 12px;
 			bottom: auto;
+		}
+	}
+
+	/* From 900 px the play page's globe runs under the top bar. */
+	@media (min-width: 900px) and (max-width: 1199px) {
+		.controls {
+			top: calc(var(--bar-h) + 28px);
 		}
 	}
 

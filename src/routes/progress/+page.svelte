@@ -248,7 +248,7 @@
 				<span class="muted hint">Load a file you exported. It is merged in, keeping the most recent review of each flag.</span>
 			</span>
 			<button class="chip" onclick={() => fileInput?.click()} disabled={!ctx}>Import…</button>
-			<input bind:this={fileInput} class="visually-hidden" type="file" accept="application/json,.json" onchange={upload} tabindex="-1" />
+			<input bind:this={fileInput} class="visually-hidden" type="file" aria-label="Progress file to import" accept="application/json,.json" onchange={upload} tabindex="-1" />
 		</div>
 		<div class="action">
 			<span>

@@ -16,11 +16,14 @@ pnpm check            # svelte-check (TypeScript 6, strict), then the service wo
 pnpm test             # Vitest units in tests/
 pnpm test:e2e         # Playwright in e2e/ (starts preview on :4173)
 pnpm size             # play-page JS budget (75 KB gzipped)
-pnpm lighthouse       # Lighthouse CI on build/ (needs Chrome; CHROME_PATH works)
+pnpm lighthouse       # Lighthouse CI on build/ (needs Chrome; CHROME_PATH works).
+                      # The hard gate for performance and LCP: CI only warns
 pnpm data             # the data pipeline (needs network on first run)
 pnpm audit:data       # data audits on the committed files
 node scripts/dev/flights.ts <dir> --gpu [--throttle]   # globe frame times
 node scripts/dev/simulate.ts [days]                     # simulated learner
+node scripts/dev/readme-shots.ts                        # README screenshots (needs pnpm preview)
+node scripts/data/flag-update.ts check                  # flags changed on Commons (weekly workflow)
 pnpm fonts            # re-subset Geist (needs Python fonttools + brotli)
 pnpm icons            # app icons in static/icons/ from the favicon's mark
 ```
@@ -92,6 +95,8 @@ reports/                generated review reports
 - Wrap every storage access in try/catch (`src/lib/store/storage.ts`).
 - Never leak the answer: not in image URLs, alt text, the title, or the DOM.
 - Look at changes in a browser in light and dark, at 375 px and 1440 px.
+- `pnpm preview` keeps the build it started with: restart it after
+  `pnpm build`, or pages load old chunk names and fail.
 
 ## Agent skills
 

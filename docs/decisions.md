@@ -449,7 +449,7 @@ app.
 black; the maskable icon keeps the mark inside the middle half.
 
 **23 languages, not 24.** The brief says the data has translations in 24;
-REST Countries has 23 (Arabic, Chinese, Croatian, Czech, Dutch, Estonian,
+mledoze/countries has 23 (Arabic, Chinese, Croatian, Czech, Dutch, Estonian,
 Finnish, French, German, Hungarian, Italian, Japanese, Korean, Persian,
 Polish, Portuguese, Russian, Serbian, Slovak, Spanish, Swedish, Turkish,
 Urdu). All 23 are offered.
@@ -498,7 +498,7 @@ three-frame check stays for devices that render fast but draw slowly.
 
 ## M7
 
-**Lighthouse performance is gated locally, and only warns on CI.** CI's
+**Lighthouse performance and LCP are gated locally, and only warn on CI.** CI's
 Lighthouse has failed on performance since the globe arrived in M2 (scores
 78 to 98 for the same build), while `pnpm lighthouse` on a laptop scores 100
 on every run. A trace at 4× CPU throttling without a GPU shows why: after
@@ -508,8 +508,10 @@ Chrome's software canvas upload). The shared GitHub runner (two cores, no
 GPU) runs each of these two to three times longer still, and its total
 blocking time swings between 170 ms and 1 s. The brief allows budgets to be
 measured "in CI or with a script": `pnpm lighthouse` is the hard gate for
-the performance score, CI keeps it as a warning, and LCP, CLS and the other
-three categories (which do not depend on the runner's speed) still fail CI.
+the performance score and LCP, CI keeps them as warnings, and CLS and the
+other three categories (which do not depend on the runner's speed) still
+fail CI. LCP is simulated from the same main-thread tasks, so it moves with
+the runner too: 1.6 s there for pages that measure 1.4 s on a laptop.
 Both the play page and a flag page (`/flags/japan`) are checked, as section
 13 asks.
 
@@ -526,5 +528,18 @@ audits, renders each changed flag before and after
 (`reports/flag-update.png`), and opens a pull request on the `flag-update`
 branch with that image and a table of files, dates, licences and authors.
 The whole pipeline runs, not only the flags, so other upstream changes
-(GeoNames populations, REST Countries names) come along and are reviewed in
+(GeoNames populations, mledoze/countries names) come along and are reviewed in
 the same pull request. It needs the repository setting in owner step 4.
+
+**Visual pass at four widths** (375, 768, 1024, 1440 px, both themes). Two
+fixes: on tall tablets (600 to 899 px wide, 900 px or taller) the globe now
+fills the space above the console instead of a 45% band with a gap under it;
+and below 1200 px the zoom controls sit at the top of the globe, where the
+860 px console cannot cover them.
+
+**Accessibility pass.** axe-core (the copy Lighthouse ships) found one issue
+on every page in both themes and at both widths: Progress's hidden file input
+had no label. 200% zoom was checked as a 640 × 450 viewport.
+
+**Copy pass:** the Review card says "Flags due for another look, just before
+you would forget them" instead of naming spaced repetition.

@@ -22,7 +22,7 @@ export interface PracticeMode {
 }
 
 export const PRACTICE: PracticeMode[] = [
-	{ slug: 'review', kind: 'review', title: 'Review', line: 'What spaced repetition says is due.', card: 'flag' },
+	{ slug: 'review', kind: 'review', title: 'Review', line: 'Flags due for another look, just before you would forget them.', card: 'flag' },
 	{ slug: 'learn', kind: 'learn', title: 'Learn new', line: 'Five new flags: study them, then name them.', card: 'flag' },
 	{ slug: 'capitals', kind: 'capitals', title: 'Capitals', line: 'See the flag and the name, type the capital.', card: 'capital' },
 	{ slug: 'reverse', kind: 'reverse', title: 'Reverse', line: 'The globe shows a country, type its name.', card: 'reverse' },
