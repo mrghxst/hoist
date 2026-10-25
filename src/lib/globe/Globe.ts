@@ -47,9 +47,14 @@ const DPR_CAP = 2;
 const AUTO_SPEED = 3 / 1000; // degrees per ms
 /**
  * Idle rotation is decoration: if a frame takes longer than this even at its
- * quickest (a slow phone, or Chrome without a GPU drawing the canvas on the
- * main thread), the globe stays still until the player moves it, so the
- * page stays responsive and the device cool (PROMPT.md 4.2, 10).
+ * quickest (a slow phone, or Chrome without a GPU, which uploads the canvas
+ * on the main thread), the globe stays still until the player moves it, so
+ * the page stays responsive and the device cool (PROMPT.md 4.2, 10).
+ *
+ * A frame's cost is the drawing plus the rendering Chrome does after it
+ * (paint and commit): a message posted at the end of the frame callback only
+ * runs once that is done. With a GPU that part is about 0.2 ms; without one
+ * it is about 11 ms for a phone-sized canvas.
  */
 const IDLE_FRAME_BUDGET = 12;
 const IDLE_SAMPLES = 3;
@@ -104,6 +109,7 @@ export class Globe {
 	private frameTimes: number[] = [];
 	private idleFrames: number[] = [];
 	private idleTooSlow = false;
+	private frameProbe: MessageChannel | null = null;
 	/** Per-layer timings when profiling (dev tool). */
 	profile: Record<string, number> | null = null;
 	private mark(name: string, t: number): number {
@@ -246,6 +252,7 @@ export class Globe {
 	destroy() {
 		this.destroyed = true;
 		cancelAnimationFrame(this.frame);
+		this.frameProbe?.port1.close();
 		if (this.idleTimer) clearTimeout(this.idleTimer);
 		for (const off of this.cleanup) off();
 		this.flight?.resolve();
@@ -301,18 +308,28 @@ export class Globe {
 		this.draw(now);
 		const spent = performance.now() - t0;
 		if (moving || this.drag) this.frameTimes.push(spent);
-		if (idle && this.data && this.idleFrames.length < IDLE_SAMPLES) {
-			this.idleFrames.push(spent);
-			if (this.idleFrames.length === IDLE_SAMPLES && Math.min(...this.idleFrames) > IDLE_FRAME_BUDGET) {
-				this.idleTooSlow = true;
-				moving = false;
-			}
-		}
+		if (idle && this.data && this.idleFrames.length < IDLE_SAMPLES) this.measureFrame(spent);
 		if (this.frameTimes.length > 600) this.frameTimes.splice(0, 300);
 
 		const pulsing = !!this.markers && !reducedMotion() && now - this.markersAt < PULSE_MS * PULSES;
 		if (moving || pulsing || this.fade) this.invalidate();
 		else this.lastFrame = 0;
+	}
+
+	/** Adds the rendering after this frame to its drawing time (see IDLE_FRAME_BUDGET). */
+	private measureFrame(drawing: number) {
+		if (typeof MessageChannel === 'undefined') return;
+		if (!this.frameProbe) {
+			this.frameProbe = new MessageChannel();
+			this.frameProbe.port1.onmessage = (e: MessageEvent<[number, number]>) => {
+				const [draw, end] = e.data;
+				this.idleFrames.push(draw + performance.now() - end);
+				if (this.idleFrames.length === IDLE_SAMPLES && Math.min(...this.idleFrames) > IDLE_FRAME_BUDGET) {
+					this.idleTooSlow = true;
+				}
+			};
+		}
+		this.frameProbe.port2.postMessage([drawing, performance.now()]);
 	}
 
 	private jump(to: Camera): Promise<void> {

@@ -348,6 +348,17 @@ and Lighthouse counted every frame as blocking: Performance was 72–75 in CI
 while LCP passed. 12 ms is where a frame becomes a "long task" under
 Lighthouse's 4× CPU slowdown. CI now uploads the Lighthouse reports.
 
+A first version timed only the JavaScript drawing, which was 3 to 4 ms in
+CI too, and CI stayed at Performance 74 with TBT 1.5 s. The CI summary and a
+local run with `--disable-gpu` showed why: without a GPU each frame also
+spends about 11 ms in Chrome's "Commit" on the main thread, uploading the
+canvas, after the frame callback. The guard now adds that part: a message
+posted at the end of the frame callback runs only once the frame is
+rendered. With a GPU the extra is about 0.2 ms. Detecting software
+rendering through WebGL was tried and dropped: SwiftShader passes
+`failIfMajorPerformanceCaveat`, and creating the context took 130 to 240
+ms. Without a GPU Lighthouse is now 100 with TBT 40 ms.
+
 `scripts/postbuild.mjs` now also patches SvelteKit's own copy of the
 prerendered pages, which `vite preview` serves, so preview and the
 end-to-end tests match what ships.
