@@ -71,3 +71,17 @@ reports/                generated review reports
 - Wrap every storage access in try/catch (`src/lib/store/storage.ts`).
 - Never leak the answer: not in image URLs, alt text, the title, or the DOM.
 - Look at changes in a browser in light and dark, at 375 px and 1440 px.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues for `mrghxst/hoist` (`gh` CLI). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five default labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `GLOSSARY.md` and `docs/adr/` at the root (created when needed), plus `docs/decisions.md`. See `docs/agents/domain.md`.
