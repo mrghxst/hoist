@@ -13,3 +13,5 @@ data/raw
 !.env.example
 .DS_Store
 Thumbs.db
+.lighthouseci
+.claude/settings.local.json

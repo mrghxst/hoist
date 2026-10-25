@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Type check
+        run: pnpm check
+      - name: Unit tests
+        run: pnpm test
+      - name: Data audits
+        run: pnpm run --if-present audit:data
+      - name: Build
+        run: pnpm build
+      - name: Bundle size
+        run: pnpm size
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+      - name: End-to-end tests
+        run: pnpm test:e2e
+      - name: Lighthouse
+        run: pnpm lighthouse
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reports
+          path: |
+            playwright-report
+            test-results
+            .lighthouseci
+          if-no-files-found: ignore
+          retention-days: 14
