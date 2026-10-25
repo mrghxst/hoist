@@ -20,6 +20,7 @@
 	import { afterFirstPaint } from '#lib/ui/after-paint.ts';
 	import type ShortcutsDialog from '#lib/ui/Shortcuts.svelte';
 	import { loadGame } from './load.ts';
+	import { clock } from '#lib/learn/daily.ts';
 	import type { GameCountry } from '#lib/data/types.ts';
 
 	interface Props {
@@ -34,9 +35,11 @@
 		begin: (ctx: PlayContext, engine: Engine) => Deck;
 		/** Shown in the answer area when the deck runs out. */
 		finish: Snippet<[Finish]>;
+		/** Shown in the flag card when the deck runs out (default: right / answered). */
+		done?: Snippet<[Finish]>;
 	}
 
-	let { first = null, label = '', placeholder = 'Type the country', picks = false, begin, finish }: Props = $props();
+	let { first = null, label = '', placeholder = 'Type the country', picks = false, begin, finish, done }: Props = $props();
 
 	let game = $state<Game | null>(null);
 	let ctx = $state<PlayContext | null>(null);
@@ -55,6 +58,8 @@
 	let shake = $state(false);
 	let input = $state<HTMLInputElement>();
 	let nextButton = $state<HTMLButtonElement>();
+	let now = $state(0);
+	let autoNext: ReturnType<typeof setTimeout> | 0 = 0;
 
 	let wide = $derived(innerWidth >= 900);
 	let current = $derived(game?.current ?? null);
@@ -88,6 +93,26 @@
 		void current;
 		return game ? game.deck.progress() : { done: 0, total: undefined };
 	});
+	/** The running time, for rounds against the clock. */
+	let time = $derived.by(() => {
+		void now;
+		void phase;
+		const e = game?.deck.elapsed?.();
+		return e === undefined ? null : clock(e);
+	});
+	let tip = $derived.by(() => {
+		if (!game || !current || !outcome) return undefined;
+		if (game.deck.tips) return game.tip(current.id);
+		return !outcome.correct && outcome.confused ? game.tip(current.id, outcome.confused.id) : undefined;
+	});
+
+	// Tick the clock while a flag waits for its answer.
+	$effect(() => {
+		if (!game?.deck.elapsed || game.finished) return;
+		const t = setInterval(() => (now = performance.now()), 250);
+		return () => clearInterval(t);
+	});
+
 	let fieldPlaceholder = $derived(
 		!game ? placeholder : ask === 'capital' ? 'Type the capital' : 'Type the country'
 	);
@@ -156,6 +181,13 @@
 	function afterAnswer() {
 		if (!game?.outcome) return;
 		started = true;
+		if (ctx) engine?.feedback(game.outcome.correct, ctx.learner.settings);
+		// Speed run: a right answer moves on by itself.
+		if (game.deck.fast && game.outcome.correct) {
+			clearTimeout(autoNext);
+			autoNext = setTimeout(next, 450);
+			return;
+		}
 		if (game.outcome.correct && game.streak > 0 && game.streak % 10 === 0) {
 			glow = false;
 			requestAnimationFrame(() => (glow = true));
@@ -191,6 +223,8 @@
 
 	function next() {
 		if (!game) return;
+		clearTimeout(autoNext);
+		autoNext = 0;
 		started = true;
 		game.advance();
 		focusInput();
@@ -275,6 +309,10 @@
 					<span class="sep" aria-hidden="true">·</span>
 					<span class="num">{Math.min(progress.done, progress.total)} of {progress.total}</span>
 				{/if}
+				{#if time}
+					<span class="sep" aria-hidden="true">·</span>
+					<span class="num" aria-label="Time">{time}</span>
+				{/if}
 			</span>
 			{#if !persistent}
 				<span class="quiet">Progress won't be saved in this browser.</span>
@@ -294,7 +332,9 @@
 
 		<div class="body">
 			<figure class="flag-card" class:glow onanimationend={() => (glow = false)}>
-				{#if game?.finished}
+				{#if game?.finished && done && ctx && engine}
+					{@render done({ game, ctx, engine, restart })}
+				{:else if game?.finished}
 					<p class="done-mark" aria-hidden="true">{game.right}/{game.answered}</p>
 				{:else if current && show === 'name' && !answered && !studying}
 					<p class="prompt-name">{current.name}</p>
@@ -380,7 +420,7 @@
 					{/if}
 
 					{#if (studying || (answered && outcome)) && current && engine}
-						<engine.Reveal {current} outcome={studying ? null : outcome} always={!typing} onnext={next} bind:button={nextButton} />
+						<engine.Reveal {current} outcome={studying ? null : outcome} always={!typing} {tip} onnext={next} bind:button={nextButton} />
 					{:else if phase === 'ask' && typing}
 						<p class="keys" id="keys">
 							<kbd>⏎</kbd> check<span class="sep" aria-hidden="true">·</span><kbd>Tab</kbd> a letter<span
@@ -490,7 +530,8 @@
 		}
 	}
 
-	.done-mark {
+	.done-mark,
+	.flag-card :global(.done-mark) {
 		font-size: 56px;
 		font-weight: 600;
 		letter-spacing: -0.04em;

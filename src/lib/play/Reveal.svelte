@@ -14,11 +14,13 @@
 		outcome: Outcome | null;
 		/** Show the button on phones too (no keyboard up to press Enter on). */
 		always: boolean;
+		/** How to tell it from its lookalikes (PROMPT.md 7.3). */
+		tip?: string;
 		onnext: () => void;
 		button?: HTMLButtonElement;
 	}
 
-	let { current, outcome, always, onnext, button = $bindable() }: Props = $props();
+	let { current, outcome, always, tip, onnext, button = $bindable() }: Props = $props();
 </script>
 
 {#snippet facts(first: { dt: string; dd: string } | null)}
@@ -89,6 +91,9 @@
 			{/if}
 			{@render facts(null)}
 		{/if}
+		{#if tip}
+			<p class="tip"><span class="muted">How to tell:</span> {tip}</p>
+		{/if}
 		<button class="next" class:always bind:this={button} onclick={onnext}><span>Next</span><kbd>⏎</kbd></button>
 	{/if}
 </div>
@@ -155,6 +160,11 @@
 		margin: 0;
 		font-size: var(--t16);
 		font-weight: 500;
+	}
+
+	.tip {
+		font-size: var(--t14);
+		max-width: 48ch;
 	}
 
 	.note {

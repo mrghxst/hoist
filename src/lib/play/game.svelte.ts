@@ -52,6 +52,12 @@ export interface Deck {
 	progress(): { done: number; total?: number };
 	next(): Prompt | null;
 	record(outcome: Outcome): void;
+	/** Time on the clock so far, for rounds against it (daily, speed run). */
+	elapsed?(): number;
+	/** A right answer moves on by itself (speed run). */
+	readonly fast?: boolean;
+	/** Show the lookalike tip after each answer (lookalike drills). */
+	readonly tips?: boolean;
 }
 
 export class Game {
@@ -127,6 +133,15 @@ export class Game {
 		this.phase = p.study ? 'study' : 'ask';
 		if (!p.study && this.ask === 'pick' && this.current) this.options = this.pickOptions(this.current);
 		this.shownAt = performance.now();
+	}
+
+	/**
+	 * How to tell this flag from a lookalike (PROMPT.md 7.3): the tip of the
+	 * group it shares with `other`, or with any group when `other` is unset.
+	 */
+	tip(id: string, other?: string): string | undefined {
+		const g = this.data.lookalikes.find((g) => g.members.includes(id) && (!other || g.members.includes(other)));
+		return g?.tip;
 	}
 
 	/** The text the hint letters come from. */

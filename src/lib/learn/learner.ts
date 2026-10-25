@@ -7,16 +7,13 @@ import { writeSettings } from '#lib/store/storage.ts';
 import { isRight, type Rating } from './grade.ts';
 import { level, recall, review, type Level } from './scheduler.ts';
 import type { ProgressStore } from './store.ts';
-import type { CardKey, CardMode, DayLog, Progress, Settings, StoredCard } from './types.ts';
+import { localDay, streak, utcDay } from './daily.ts';
+import { better } from './transfer.ts';
+import type { CardKey, CardMode, DailyResult, DayLog, Progress, Settings, SpeedResult, StoredCard } from './types.ts';
 
 export const DEFAULT_NEW_PER_DAY = 10;
 
-/** Local calendar date, `YYYY-MM-DD`: "today" is the player's own day. */
-export function localDay(now: number): string {
-	const d = new Date(now);
-	const p = (n: number) => String(n).padStart(2, '0');
-	return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-}
+export { localDay };
 
 export const keyOf = (mode: CardMode, id: string) => `${mode}:${id}` as CardKey;
 
@@ -133,6 +130,45 @@ export class Learner {
 			.map(([id, c]) => [id, recall(c!, now)] as const)
 			.sort((a, b) => a[1] - b[1])
 			.map(([id]) => id);
+	}
+
+	/** Today's daily (UTC), finished or in progress. */
+	daily(now = Date.now()): DailyResult | undefined {
+		return this.progress.daily[utcDay(now)];
+	}
+
+	/**
+	 * Saves the daily after every answer, so a reload resumes the round
+	 * rather than starting it again (one attempt a day).
+	 */
+	saveDaily(date: string, result: DailyResult, now = Date.now()) {
+		this.progress.daily[date] = result;
+		this.progress.updated = now;
+		this.store.save(this.progress);
+		this.changed();
+	}
+
+	/** Daily challenges in a row (finished ones), up to today. */
+	dailyStreak(now = Date.now()): number {
+		const done = Object.fromEntries(Object.entries(this.progress.daily).filter(([, r]) => r.marks.length >= 10));
+		return streak(done, utcDay(now));
+	}
+
+	/** Days in a row with any practice, up to today (local days). */
+	practiceStreak(now = Date.now()): number {
+		const played = Object.fromEntries(Object.entries(this.progress.days).filter(([, d]) => d.n > 0));
+		return streak(played, localDay(now));
+	}
+
+	/** Records a finished speed run; true when it is a new personal best. */
+	saveSpeed(scope: string, result: SpeedResult): boolean {
+		const old = this.progress.best[scope];
+		const best = !old || better(result, old);
+		if (best) this.progress.best[scope] = result;
+		this.progress.updated = result.at;
+		this.store.save(this.progress);
+		this.changed();
+		return best;
 	}
 
 	newPerDay(): number {

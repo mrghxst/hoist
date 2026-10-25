@@ -55,17 +55,41 @@ export interface Settings {
 	territories?: boolean;
 	/** Extra languages whose names are accepted (M6). */
 	languages?: string[];
+	/** A soft tick and a low tone, off by default (PROMPT.md 6.2). */
 	sound?: boolean;
+	/** A 10 ms vibration on a right answer, on by default. */
 	haptics?: boolean;
+}
+
+/** One finished daily challenge (PROMPT.md 2.3). */
+export interface DailyResult {
+	right: number;
+	/** From the first flag to the last answer. */
+	ms: number;
+	/** One letter per flag: G right, Y right with a typo or a hint, R wrong. */
+	marks: string;
+}
+
+/** A finished speed run, the best one kept per scope (PROMPT.md 2.4). */
+export interface SpeedResult {
+	right: number;
+	total: number;
+	ms: number;
+	/** When it was run, ms since epoch. */
+	at: number;
 }
 
 export interface Progress {
 	/** Schema version. */
-	v: 1;
+	v: 2;
 	settings: Settings;
 	cards: Record<string, StoredCard>;
 	/** Keyed by local date, `YYYY-MM-DD`. */
 	days: Record<string, DayLog>;
+	/** Daily challenges, keyed by UTC date (everyone's daily is the same). */
+	daily: Record<string, DailyResult>;
+	/** Best speed run per scope (`all`, `europe`, ...). */
+	best: Record<string, SpeedResult>;
 	/** Last change, ms since epoch (import merges by most recent). */
 	updated: number;
 }

@@ -2,12 +2,12 @@
  * Reading the stored object safely, and migrating old shapes (PROMPT.md 3.4).
  * Pure functions: no storage access here, so they are easy to test.
  */
-import type { DayLog, Progress, Settings, StoredCard } from './types.ts';
+import type { DailyResult, DayLog, Progress, Settings, SpeedResult, StoredCard } from './types.ts';
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export function emptyProgress(now = Date.now()): Progress {
-	return { v: 1, settings: {}, cards: {}, days: {}, updated: now };
+	return { v: 2, settings: {}, cards: {}, days: {}, daily: {}, best: {}, updated: now };
 }
 
 export type Migrated =
@@ -20,6 +20,7 @@ const finite = (x: unknown): x is number => typeof x === 'number' && Number.isFi
 
 const CARD_KEY = /^(flag|capital|reverse):[A-Z]{2}$/;
 const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/;
+const SCOPE_KEY = /^[a-z-]{2,20}$/;
 
 export function cleanCard(x: unknown): StoredCard | null {
 	if (!isObject(x)) return null;
@@ -51,6 +52,20 @@ function cleanDay(x: unknown): DayLog | null {
 	return out;
 }
 
+function cleanDaily(x: unknown): DailyResult | null {
+	if (!isObject(x)) return null;
+	const { right, ms, marks } = x;
+	if (!finite(right) || !finite(ms) || typeof marks !== 'string' || !/^[GYR]{1,20}$/.test(marks)) return null;
+	return { right, ms, marks };
+}
+
+function cleanSpeed(x: unknown): SpeedResult | null {
+	if (!isObject(x)) return null;
+	const { right, total, ms, at } = x;
+	if (![right, total, ms, at].every(finite)) return null;
+	return { right: right as number, total: total as number, ms: ms as number, at: at as number };
+}
+
 export function cleanSettings(x: unknown): Settings {
 	if (!isObject(x)) return {};
 	const out: Settings = {};
@@ -76,27 +91,39 @@ function cleanMap<T>(x: unknown, key: RegExp, clean: (v: unknown) => T | null): 
 }
 
 /**
- * Turns whatever is stored into the current shape. Unknown or broken parts
- * are dropped, never thrown on: a bad entry must not lose the rest.
+ * Each step turns a stored object of version n into version n + 1. They
+ * work on the raw object; the result is cleaned once at the end.
  *
  * - v0 (M0–M3): `{ settings }` only, no version field.
- * - v1: the current shape.
+ * - v1 (M4): cards and days.
+ * - v2 (M5): daily results and speed-run bests.
+ */
+export const STEPS: Record<number, (raw: Record<string, unknown>) => Record<string, unknown>> = {
+	0: (raw) => ({ v: 1, settings: raw.settings, cards: {}, days: {}, updated: raw.updated }),
+	1: (raw) => ({ ...raw, v: 2, daily: {}, best: {} })
+};
+
+/**
+ * Turns whatever is stored into the current shape. Unknown or broken parts
+ * are dropped, never thrown on: a bad entry must not lose the rest.
  */
 export function migrate(raw: unknown, now = Date.now()): Migrated {
 	if (!isObject(raw)) return { ok: true, progress: emptyProgress(now), from: 0 };
-	const version = finite(raw.v) ? raw.v : 0;
-	if (version > SCHEMA_VERSION) {
-		return { ok: false, reason: 'newer', progress: v1From(raw, now) };
-	}
-	return { ok: true, progress: v1From(raw, now), from: version };
+	const from = finite(raw.v) ? raw.v : 0;
+	if (from > SCHEMA_VERSION) return { ok: false, reason: 'newer', progress: clean(raw, now) };
+	let cur = raw;
+	for (let v = from; v < SCHEMA_VERSION; v++) cur = STEPS[v]!(cur);
+	return { ok: true, progress: clean(cur, now), from };
 }
 
-function v1From(raw: Record<string, unknown>, now: number): Progress {
+function clean(raw: Record<string, unknown>, now: number): Progress {
 	return {
-		v: 1,
+		v: 2,
 		settings: cleanSettings(raw.settings),
 		cards: cleanMap(raw.cards, CARD_KEY, cleanCard),
 		days: cleanMap(raw.days, DAY_KEY, cleanDay),
+		daily: cleanMap(raw.daily, DAY_KEY, cleanDaily),
+		best: cleanMap(raw.best, SCOPE_KEY, cleanSpeed),
 		updated: finite(raw.updated) ? raw.updated : now
 	};
 }

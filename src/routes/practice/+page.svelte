@@ -9,7 +9,7 @@
 	import { readSettings, writeSettings } from '#lib/store/storage.ts';
 	import type { Settings } from '#lib/learn/types.ts';
 
-	const modes = PRACTICE.filter((m) => m.kind !== 'region');
+	const modes = PRACTICE.filter((m) => m.kind !== 'region' && !m.hidden);
 	const regions = PRACTICE.filter((m) => m.kind === 'region');
 
 	let ctx = $state<PlayContext | null>(null);
@@ -55,6 +55,12 @@
 				return unseen ? `${unseen} new` : 'All learned';
 			case 'region':
 				return `${ids.length - unseen} of ${ids.length}`;
+			case 'lookalikes':
+				return `${ctx.data.lookalikes.length} groups`;
+			case 'speed': {
+				const best = l.progress.best.all;
+				return best ? `Best ${best.right}/${best.total}` : '';
+			}
 			default:
 				return due ? `${due} due` : unseen ? `${unseen} to learn` : 'All learned';
 		}
@@ -124,6 +130,20 @@
 				<span class="muted hint">Also practise Greenland, Hong Kong, Puerto Rico and other places with their own flags.</span>
 			</span>
 			<input type="checkbox" checked={settings.territories ?? false} onchange={(e) => set({ territories: e.currentTarget.checked })} />
+		</label>
+		<label class="setting toggle">
+			<span>
+				<span class="label">Sound</span>
+				<span class="muted hint">A soft tick when you are right, a low tone when you are not.</span>
+			</span>
+			<input type="checkbox" checked={settings.sound ?? false} onchange={(e) => set({ sound: e.currentTarget.checked })} />
+		</label>
+		<label class="setting toggle">
+			<span>
+				<span class="label">Vibration</span>
+				<span class="muted hint">A short buzz on a right answer, on phones that can.</span>
+			</span>
+			<input type="checkbox" checked={settings.haptics ?? true} onchange={(e) => set({ haptics: e.currentTarget.checked })} />
 		</label>
 	</div>
 </section>
@@ -261,6 +281,7 @@
 
 	.toggle {
 		cursor: pointer;
+		flex-wrap: nowrap;
 	}
 
 	.toggle input {

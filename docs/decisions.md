@@ -351,3 +351,65 @@ Lighthouse's 4× CPU slowdown. CI now uploads the Lighthouse reports.
 `scripts/postbuild.mjs` now also patches SvelteKit's own copy of the
 prerendered pages, which `vite preview` serves, so preview and the
 end-to-end tests match what ships.
+
+## M5
+
+**The daily keeps flags apart for 14 days, not 30.** The brief asks for
+"never repeating within 30 days", which cannot hold: 30 days of ten flags
+is 300 and there are 197. Each day takes two easy, three medium and five
+hard flags (from 40, 54 and 103); the longest gap that can always be kept
+with that mix is 17 days, and 14 leaves some choice every day. Each day's
+set is chosen with a seed from the UTC date, after leaving out the last 14
+days' flags, so the sets are computed in order from 2026-10-01. Same date,
+same data, same ten flags everywhere (unit-tested over a year). A round
+starts easy and ends hard.
+
+**One attempt a day, resumable.** The daily is saved after every answer,
+so a reload carries on where it stopped instead of starting over (which
+would also let a player see the flags twice). A finished daily opens on
+its result.
+
+**The clock counts answering time only**, for the daily and speed runs:
+from a flag appearing to its answer. Reading a result does not cost time.
+
+**Share:** "Copy result" everywhere, plus "Share" (the Web Share API) on
+touch devices. The page shows the ten results as monochrome squares (right
+solid, with help half-filled, wrong outlined in red); the colourful emoji
+are only in the shared text, as the brief writes it.
+
+**Two streaks.** The daily streak counts UTC days with a finished daily
+(Daily page, Progress). The practice streak counts local days with any
+answer (Progress). Play's header keeps the in-session "right in a row"
+count, which drives the glow at 10.
+
+**Daily and speed-run answers are scheduled** like any others (every
+minute should move flags into memory, 1.3), but as warm-ups: flags seen
+there for the first time do not use up the day's new flags.
+
+**Speed run:** pick All 197 or a continent; flags shuffled; a right answer
+moves on by itself after 450 ms; a wrong one waits for Enter. The best run
+per scope is kept: most right, then fastest.
+
+**Lookalike drills:** the four groups the player knows least (average
+recall of their members), each group's flags back to back with the
+interleaving turned off, unseen members studied first. After every answer
+the group's tip ("How to tell") is shown. The tip also appears in every
+mode when a wrong answer named a flag from the same group. `/practice/drill
+?ids=TD` drills the groups of given flags: the "Drill" buttons in "Hardest
+for you" on Progress use it.
+
+**Progress page:** the mastery globe (the same four tints as the legend,
+zoomed so the land is solid), totals, both streaks, a 12-week calendar
+strip (shade by answers: none, under 10, under 30, 30 and more), the five
+flags with the most misses (lapses) with Drill buttons, and best speed
+runs. The globe there has no zoom buttons: on phones they covered it, and
+drag, pinch and the keys still work.
+
+**Sound and haptics:** sound off by default, a 70 ms triangle tick at
+1,320 Hz for right and a 220 ms sine at 196 Hz for wrong, made with the Web
+Audio API. Vibration on by default, 10 ms on a right answer. Both are in
+Practice's settings and load with the engine.
+
+**Schema v2** adds `daily` (by UTC date) and `best` (by scope). Migrations
+are now steps v0 → v1 → v2 on the raw object, each a pure function, then
+one clean-up; import keeps the first daily recorded and the better best.

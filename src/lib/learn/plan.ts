@@ -7,7 +7,8 @@
 import type { GameCountry, GameData } from '#lib/data/types.ts';
 import { batches, groupsOf, introductionOrder } from './introduce.ts';
 import type { Learner } from './learner.ts';
-import { SessionQueue, type Similarity } from './queue.ts';
+import { SessionQueue, type Item, type Similarity } from './queue.ts';
+import { recall } from './scheduler.ts';
 import type { CardMode } from './types.ts';
 
 export const EXTRA = 20;
@@ -84,6 +85,50 @@ export class Planner {
 		};
 	}
 
+	/**
+	 * A lookalike drill (PROMPT.md 2.4, 7.3): a few confusable groups, each
+	 * group's flags back to back so they can be told apart. With `focus`, the
+	 * groups of those flags (the "drill" buttons on Progress); otherwise the
+	 * groups the player knows least. Unseen flags get a study card first.
+	 */
+	lookalikes(o: { focus?: readonly string[]; groups?: number; now?: number; random?: () => number } = {}): Plan {
+		const now = o.now ?? Date.now();
+		const rand = o.random ?? Math.random;
+		const known = (id: string) => {
+			const c = this.learner.card('flag', id);
+			return c && c.reps > 0 ? recall(c, now) : 0;
+		};
+		let groups = this.data.lookalikes.filter((g) => g.members.every((id) => this.byId.get(id)?.pack === 'core'));
+		if (o.focus?.length) {
+			const focus = new Set(o.focus);
+			groups = groups.filter((g) => g.members.some((id) => focus.has(id)));
+		} else {
+			// Weakest first: a group is as hard as its average member.
+			const score = (g: { members: string[] }) => g.members.reduce((n, id) => n + known(id), 0) / g.members.length;
+			groups = groups
+				.map((g) => [g, score(g) + rand() * 0.05] as const)
+				.sort((a, b) => a[1] - b[1])
+				.map(([g]) => g)
+				.slice(0, o.groups ?? 4);
+		}
+		const sequence: Item[] = [];
+		const used = new Set<string>();
+		for (const g of groups) {
+			const members = g.members.filter((id) => !used.has(id));
+			for (const id of members) used.add(id);
+			for (const id of members) if (!this.learner.card('flag', id)?.reps) sequence.push({ id, study: true });
+			for (const id of shuffle(members, rand)) sequence.push({ id, study: false });
+		}
+		// A flag in no group is drilled on its own.
+		for (const id of o.focus ?? []) if (!used.has(id)) sequence.push({ id, study: false });
+		return {
+			queue: new SessionQueue({ due: [], sequence, interleave: false, random: rand }),
+			due: sequence.filter((i) => !i.study).length,
+			fresh: sequence.filter((i) => i.study).length,
+			extra: false
+		};
+	}
+
 	/** Counts for the Practice cards and the play header. */
 	summary(mode: CardMode, ids: readonly string[], now = Date.now()) {
 		return {
@@ -92,4 +137,13 @@ export class Planner {
 			newToday: Math.min(this.learner.newLeftToday(mode, now), this.learner.unseen(mode, ids).length)
 		};
 	}
+}
+
+function shuffle<T>(xs: readonly T[], rand: () => number): T[] {
+	const a = [...xs];
+	for (let i = a.length - 1; i > 0; i--) {
+		const j = Math.floor(rand() * (i + 1));
+		[a[i], a[j]] = [a[j]!, a[i]!];
+	}
+	return a;
 }

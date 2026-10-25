@@ -3,9 +3,14 @@
  * Import validates the file and merges by most recent review.
  */
 import { migrate } from './schema.ts';
-import type { DayLog, Progress } from './types.ts';
+import type { DayLog, Progress, SpeedResult } from './types.ts';
 
 export const EXPORT_NAME = 'hoist-progress.json';
+
+/** A speed run beats another with more right, or as many right in less time. */
+export function better(a: SpeedResult, b: SpeedResult): boolean {
+	return a.right > b.right || (a.right === b.right && a.ms < b.ms);
+}
 
 interface ExportFile {
 	app: 'hoist';
@@ -39,7 +44,8 @@ export function parseImport(text: string): Parsed {
 
 /**
  * Merges an imported file into the current progress: for each card the more
- * recent review wins; days keep the larger counts; settings already set here
+ * recent review wins; days keep the larger counts; a daily played in both
+ * keeps the one here; the better speed run wins; settings already set here
  * stay, missing ones come from the file.
  */
 export function merge(current: Progress, incoming: Progress): Progress {
@@ -59,11 +65,20 @@ export function merge(current: Progress, incoming: Progress): Progress {
 		for (const [m, n] of Object.entries(d.fresh) as [keyof DayLog['fresh'], number][]) fresh[m] = Math.max(fresh[m] ?? 0, n);
 		days[k] = { n: Math.max(mine.n, d.n), right: Math.max(mine.right, d.right), fresh };
 	}
+	// One attempt per daily: the first one recorded stays.
+	const daily = { ...incoming.daily, ...current.daily };
+	const best = { ...current.best };
+	for (const [k, b] of Object.entries(incoming.best)) {
+		const mine = best[k];
+		if (!mine || better(b, mine)) best[k] = b;
+	}
 	return {
-		v: 1,
+		v: 2,
 		settings: { ...incoming.settings, ...current.settings },
 		cards,
 		days,
+		daily,
+		best,
 		updated: Math.max(current.updated, incoming.updated)
 	};
 }

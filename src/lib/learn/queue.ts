@@ -36,6 +36,8 @@ export interface QueueOptions {
 	due: string[];
 	/** New card ids in batches (see `batches` in introduce.ts). */
 	fresh?: string[][];
+	/** An exact order instead of due-then-new (the lookalike drill). */
+	sequence?: Item[];
 	similarity?: (id: string) => Similarity | undefined;
 	/** Keep near-identical flags apart (default) or not (lookalike drill). */
 	interleave?: boolean;
@@ -55,6 +57,10 @@ export class SessionQueue {
 		this.similarity = o.similarity;
 		this.interleave = o.interleave ?? true;
 		this.random = o.random ?? Math.random;
+		if (o.sequence) {
+			this.pending = o.sequence.map((i) => ({ ...i }));
+			return;
+		}
 		for (const id of o.due.slice(0, o.maxDue ?? MAX_DUE)) this.pending.push({ id, study: false });
 		for (const batch of o.fresh ?? []) {
 			for (const id of batch) this.pending.push({ id, study: true });

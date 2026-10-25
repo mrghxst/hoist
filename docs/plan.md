@@ -66,9 +66,17 @@ building. Choices the brief does not cover are in [decisions.md](decisions.md).
 - [x] Lighthouse 100 / 100 / 100 / 100, LCP 1.36 s, TBT under 10 ms, CLS 0;
       initial JS 45.4 KB
 
-## M5: Fun
-- [ ] Daily with share, streaks, speed run, mastery globe
-- [ ] Lookalike drills, streak glow, sound and haptics
+## M5: Fun (done 2026-10-25)
+- [x] Daily: ten flags from the UTC date (2 easy, 3 medium, 5 hard, no repeat
+      within 14 days; 30 is impossible with 197 flags), resumable, one attempt,
+      share text, copy and Web Share; same set in two browsers (e2e)
+- [x] Daily streak and practice streak
+- [x] Speed run (all 197 or a continent) with personal bests
+- [x] Lookalike drills with "How to tell" tips; drill buttons from Progress
+- [x] Progress: mastery globe, totals, streaks, 12-week calendar, hardest five,
+      best runs, export / import / reset
+- [x] Streak glow (M3), optional sound, vibration (settings)
+- [x] Schema v2 with step migrations
 
 ## M6: Pages, offline, languages
 - [ ] `/flags` grid, 197 flag pages with static globes and OG images

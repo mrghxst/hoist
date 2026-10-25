@@ -11,7 +11,7 @@ export interface ProgressStore {
 	 *  saved by a newer Hoist). */
 	readonly persistent: boolean;
 	load(): Progress;
-	/** Saves cards and days. Settings are saved on their own
+	/** Saves everything but the settings, which are saved on their own
 	 *  (`writeSettings`), so a stale copy here never undoes a change made
 	 *  meanwhile, such as the theme toggle. */
 	save(progress: Progress): boolean;
@@ -39,7 +39,8 @@ export class LocalStore implements ProgressStore {
 	save(progress: Progress): boolean {
 		if (this.readOnly || !this.persistent) return false;
 		const raw = readRaw();
-		return writeRaw({ ...raw, v: progress.v, cards: progress.cards, days: progress.days, updated: progress.updated });
+		const { settings: _, ...rest } = progress;
+		return writeRaw({ ...raw, ...rest });
 	}
 }
 

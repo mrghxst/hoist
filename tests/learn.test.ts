@@ -6,7 +6,7 @@ import { Learner, localDay } from '../src/lib/learn/learner.ts';
 import { Planner } from '../src/lib/learn/plan.ts';
 import { MAX_DUE, SessionQueue, type Item, type Similarity } from '../src/lib/learn/queue.ts';
 import { intervalDays, level, recall, review } from '../src/lib/learn/scheduler.ts';
-import { emptyProgress, migrate } from '../src/lib/learn/schema.ts';
+import { emptyProgress, migrate, STEPS } from '../src/lib/learn/schema.ts';
 import { LocalStore, MemoryStore } from '../src/lib/learn/store.ts';
 import { exportProgress, merge, parseImport } from '../src/lib/learn/transfer.ts';
 import type { GameData } from '../src/lib/data/types.ts';
@@ -72,7 +72,34 @@ describe('schema and migrations', () => {
 		const m = migrate({ settings: { theme: 'dark', scope: 'europe', bogus: 1 } }, T0);
 		expect(m).toMatchObject({ ok: true, from: 0 });
 		expect(m.progress.settings).toEqual({ theme: 'dark', scope: 'europe' });
-		expect(m.progress.v).toBe(1);
+		expect(m.progress.v).toBe(2);
+	});
+
+	it('migrates v1 (M4) to v2 and keeps cards and days', () => {
+		const card = review(undefined, GOOD, T0);
+		const v1 = { v: 1, settings: { newPerDay: 20 }, cards: { 'flag:JP': card }, days: { '2026-01-05': { n: 1, right: 1, fresh: { flag: 1 } } }, updated: T0 };
+		const m = migrate(v1);
+		expect(m).toMatchObject({ ok: true, from: 1 });
+		expect(m.progress).toEqual({ ...v1, v: 2, daily: {}, best: {} });
+	});
+
+	it('each step is pure and moves one version up', () => {
+		const raw = { settings: { theme: 'dark' } };
+		const copy = structuredClone(raw);
+		const v1 = STEPS[0]!(raw);
+		expect(raw).toEqual(copy);
+		expect(v1.v).toBe(1);
+		expect(STEPS[1]!(v1).v).toBe(2);
+	});
+
+	it('keeps valid daily results and bests, drops broken ones', () => {
+		const m = migrate({
+			v: 2,
+			daily: { '2026-10-25': { right: 8, ms: 41000, marks: 'GGGRGGYGRG' }, '2026-10-24': { right: 1, ms: 5, marks: 'XX' } },
+			best: { all: { right: 190, total: 197, ms: 600000, at: T0 }, 'BAD KEY': { right: 1, total: 1, ms: 1, at: 1 } }
+		});
+		expect(Object.keys(m.progress.daily)).toEqual(['2026-10-25']);
+		expect(Object.keys(m.progress.best)).toEqual(['all']);
 	});
 
 	it('drops broken cards and days but keeps the rest', () => {
@@ -88,7 +115,7 @@ describe('schema and migrations', () => {
 	});
 
 	it('flags a store written by a newer version', () => {
-		const m = migrate({ v: 2, settings: { theme: 'dark' } });
+		const m = migrate({ v: 9, settings: { theme: 'dark' } });
 		expect(m.ok).toBe(false);
 		expect(m.progress.settings.theme).toBe('dark');
 	});
@@ -438,5 +465,83 @@ describe('a simulated month of daily sessions', () => {
 		// And a reasonable share is due on any given day afterwards.
 		const dueAfter = cards.filter((c) => c.due <= end).length;
 		expect(dueAfter).toBeLessThan(cards.length / 2);
+	});
+});
+
+describe('lookalike drills (PROMPT.md 7.3)', () => {
+	const groupsOfId = (id: string) => data.lookalikes.filter((g) => g.members.includes(id));
+
+	it('drills the groups of the flags asked for, members back to back', () => {
+		const l = learner();
+		for (const id of ['TD', 'RO']) l.answer('flag', id, GOOD, T0);
+		const plan = new Planner(data, l).lookalikes({ focus: ['TD'], random: seeded(5) });
+		const shown = drain(plan.queue);
+		const members = new Set(groupsOfId('TD').flatMap((g) => g.members));
+		expect(new Set(shown.map((i) => i.id))).toEqual(members);
+		// Seen flags are quizzed straight away; unseen ones are studied first.
+		for (const id of members) {
+			const first = shown.find((i) => i.id === id)!;
+			expect(first.study).toBe(!['TD', 'RO'].includes(id));
+		}
+	});
+
+	it('without a focus picks a few groups, each kept together', () => {
+		const plan = new Planner(data, learner()).lookalikes({ groups: 3, random: seeded(9) });
+		const quiz = drain(plan.queue).filter((i) => !i.study).map((i) => i.id);
+		// Consecutive quiz cards mostly share a group: the duels are back to back.
+		let together = 0;
+		for (let i = 1; i < quiz.length; i++) {
+			const g = groupsOfId(quiz[i]!).map((x) => x.id);
+			if (groupsOfId(quiz[i - 1]!).some((x) => g.includes(x.id))) together++;
+		}
+		expect(together).toBeGreaterThanOrEqual(quiz.length - 3);
+	});
+
+	it('drills a flag with no lookalikes on its own', () => {
+		const solo = data.countries.find((c) => c.pack === 'core' && !data.lookalikes.some((g) => g.members.includes(c.id)))!;
+		const plan = new Planner(data, learner()).lookalikes({ focus: [solo.id] });
+		expect(drain(plan.queue).map((i) => i.id)).toEqual([solo.id]);
+	});
+});
+
+describe('daily results, streaks and speed runs', () => {
+	it('keeps the better speed run per scope', () => {
+		const l = learner();
+		expect(l.saveSpeed('all', { right: 150, total: 197, ms: 600_000, at: T0 })).toBe(true);
+		expect(l.saveSpeed('all', { right: 140, total: 197, ms: 300_000, at: T0 })).toBe(false);
+		expect(l.saveSpeed('all', { right: 150, total: 197, ms: 590_000, at: T0 })).toBe(true);
+		expect(l.progress.best.all!.ms).toBe(590_000);
+		expect(l.saveSpeed('europe', { right: 1, total: 46, ms: 1, at: T0 })).toBe(true);
+	});
+
+	it('counts only finished dailies in the daily streak', () => {
+		const l = learner();
+		const now = Date.UTC(2026, 9, 25, 12);
+		l.saveDaily('2026-10-23', { right: 9, ms: 1, marks: 'GGGGGGGGGR' });
+		l.saveDaily('2026-10-24', { right: 9, ms: 1, marks: 'GGGGGGGGGR' });
+		l.saveDaily('2026-10-25', { right: 2, ms: 1, marks: 'GG' });
+		expect(l.dailyStreak(now)).toBe(2);
+	});
+
+	it('counts practice days in a row (local days)', () => {
+		const l = learner();
+		l.answer('flag', 'JP', GOOD, T0 - DAY);
+		l.answer('flag', 'JP', GOOD, T0);
+		expect(l.practiceStreak(T0)).toBe(2);
+		expect(l.practiceStreak(T0 + 3 * DAY)).toBe(0);
+	});
+
+	it('an import keeps the first daily and the better best', () => {
+		const a = learner();
+		a.saveDaily('2026-10-25', { right: 5, ms: 1, marks: 'GGGGGRRRRR' });
+		a.saveSpeed('all', { right: 100, total: 197, ms: 1, at: T0 });
+		const b = learner();
+		b.saveDaily('2026-10-25', { right: 10, ms: 1, marks: 'GGGGGGGGGG' });
+		b.saveDaily('2026-10-24', { right: 7, ms: 1, marks: 'GGGGGGGRRR' });
+		b.saveSpeed('all', { right: 120, total: 197, ms: 1, at: T0 });
+		const m = merge(a.progress, b.progress);
+		expect(m.daily['2026-10-25']!.right).toBe(5);
+		expect(m.daily['2026-10-24']!.right).toBe(7);
+		expect(m.best.all!.right).toBe(120);
 	});
 });
