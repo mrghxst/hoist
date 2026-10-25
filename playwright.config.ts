@@ -8,6 +8,9 @@ export default defineConfig({
 	reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
 	use: {
 		baseURL: 'http://localhost:4173',
+		// Each install precaches ~700 files and slows every other test down;
+		// the offline test turns the worker back on.
+		serviceWorkers: 'block',
 		trace: 'retain-on-failure'
 	},
 	projects: [

@@ -15,12 +15,13 @@
     "dev": "vite dev",
     "build": "vite build && node scripts/postbuild.mjs",
     "preview": "vite preview",
-    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && tsc -p src/service-worker",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "size": "node scripts/size.mjs",
     "lighthouse": "lhci autorun",
+    "icons": "node scripts/icons.mjs",
     "fonts": "sh scripts/fonts/subset.sh",
     "data": "node scripts/data/build.ts",
     "audit:data": "node scripts/data/audit.ts",
@@ -63,7 +64,6 @@
   },
   "dependencies": {
     "d3-geo": "3.1.1",
-    "d3-inertia": "0.4.0",
     "topojson-client": "3.1.0",
     "ts-fsrs": "5.4.2",
     "versor": "0.2.0"

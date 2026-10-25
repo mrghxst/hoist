@@ -424,3 +424,65 @@ Practice's settings and load with the engine.
 **Schema v2** adds `daily` (by UTC date) and `best` (by scope). Migrations
 are now steps v0 → v1 → v2 on the raw object, each a pure function, then
 one clean-up; import keeps the first daily recorded and the better best.
+
+## M6
+
+**Offline with SvelteKit's own service worker, not `@vite-pwa/sveltekit`.**
+The brief names vite-pwa, but its SvelteKit plugin only supports kit 1 and 2,
+and this is kit 3. `src/service-worker/index.ts` does the same job in about
+90 lines, with its own `tsconfig.json` so the worker's types stay out of the
+app.
+- On install it caches the app files (hashed), the pages people play on
+  (not the 216 flag pages, the images or the XML), the fonts, the icons, the
+  manifest, the overview geometry and land dots, and every flag the quiz
+  shows (read from the quiz data it has just cached). Flag pages, their
+  static globes and the detailed geometry are cached when visited.
+- Pages are network first (a new version shows when online), then the
+  cache, then the home page. Everything else is cache first.
+- SvelteKit's prerendered list leaves out `/`, so the worker adds it.
+- Cache lookups ignore `Vary`: `vite preview` sends `Vary: Origin` and
+  module scripts send an Origin, which turned every cached script into a
+  miss offline. The files are static and same-origin, so this is safe.
+
+**Install:** `static/manifest.webmanifest` (standalone, white) and icons from
+`pnpm icons` (`scripts/icons.mjs`): the favicon's flag on a pole, white on
+black; the maskable icon keeps the mark inside the middle half.
+
+**23 languages, not 24.** The brief says the data has translations in 24;
+REST Countries has 23 (Arabic, Chinese, Croatian, Czech, Dutch, Estonian,
+Finnish, French, German, Hungarian, Italian, Japanese, Korean, Persian,
+Polish, Portuguese, Russian, Serbian, Slovak, Spanish, Swedish, Turkish,
+Urdu). All 23 are offered.
+
+**English wins over translations.** A translated name that is another
+country's English name is not accepted for this one (Polish lists "Sudan"
+for South Sudan). The translations (210 KB) load only when a language is
+turned on, and are in place before the first answer is checked.
+
+**Flag pages:** one per flag, 216 (197 countries and 19 territories), at
+`/flags/<slug>`. Each has the flag at its true size, the name and official
+name, capital, largest city with population (GeoNames), region and
+subregion, proportions as height to width (`2:3`), the other accepted
+names, the description, a static globe (light and dark SVGs, so no
+JavaScript), its lookalike groups with tips, and the flag's author and
+licence.
+
+**Share images:** 1200×630 PNGs made at build time with resvg and the Geist
+TTFs from the `geist` package: flag, small globe and name for each flag
+page; a grid of well-known flags for the site (`/og.png`).
+
+**Nepal has no hairline.** The hairline is a rectangle and Nepal's flag is
+not one. FlagImage drops it for any flag taller than it is wide (only
+Nepal), which it knows from the ratio already in the page, so the quiz DOM
+still names no country. The share image does the same.
+
+**`/flags` uses chips, not a `<select>`, for sorting.** Svelte's `<select>`
+helper went into the runtime chunk every page loads, which pushed it over
+the ~16 KB slow-start step and the play page's LCP to 1.51 s. Chips match
+the region filter anyway. On phones the region chips are one row that
+scrolls sideways. The level dots load after first paint.
+
+**Sitemap and robots** are prerendered endpoints that use `ORIGIN` from
+`#lib/brand.ts` (222 URLs: the pages and the 216 flags).
+
+**Removed `d3-inertia`:** the globe's drag has its own inertia since M2.

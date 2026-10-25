@@ -19,7 +19,7 @@
 	import FlagImage from '#lib/ui/FlagImage.svelte';
 	import { afterFirstPaint } from '#lib/ui/after-paint.ts';
 	import type ShortcutsDialog from '#lib/ui/Shortcuts.svelte';
-	import { loadGame } from './load.ts';
+	import { loadGame, loadTranslations } from './load.ts';
 	import { clock } from '#lib/learn/daily.ts';
 	import type { GameCountry } from '#lib/data/types.ts';
 
@@ -138,6 +138,12 @@
 				const g = new m.Game(d, begin(c, m));
 				await yieldTask();
 				g.start();
+				// "Also accept names in …" (5.2): the translations load only when
+				// asked for, and before the first answer is checked. Without them
+				// (offline before they were cached) English still works.
+				const codes = c.learner.settings.languages ?? [];
+				const translations = codes.length ? await loadTranslations().catch(() => null) : null;
+				if (translations) g.setExtraNames(m.extraNames(translations, codes, d.countries));
 				// Keep anything typed while the data was loading.
 				if (input?.value && g.phase === 'ask') g.input = input.value;
 				ctx = c;

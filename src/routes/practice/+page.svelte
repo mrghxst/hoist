@@ -7,6 +7,7 @@
 	import { PRACTICE, type PracticeMode } from '#lib/play/practice.ts';
 	import { FIRST_CHOICE, scopeIds, scopeOf, title } from '#lib/play/scope.ts';
 	import { readSettings, writeSettings } from '#lib/store/storage.ts';
+	import { LANGUAGES } from '#lib/play/languages.ts';
 	import type { Settings } from '#lib/learn/types.ts';
 
 	const modes = PRACTICE.filter((m) => m.kind !== 'region' && !m.hidden);
@@ -38,6 +39,11 @@
 		settings = { ...settings, ...patch };
 		if (ctx) ctx.learner.setSettings(patch);
 		else writeSettings(patch);
+	}
+
+	function toggleLanguage(code: string) {
+		const now = settings.languages ?? [];
+		set({ languages: now.includes(code) ? now.filter((c) => c !== code) : [...now, code] });
 	}
 
 	/** The number on each card. */
@@ -131,6 +137,19 @@
 			</span>
 			<input type="checkbox" checked={settings.territories ?? false} onchange={(e) => set({ territories: e.currentTarget.checked })} />
 		</label>
+		<div class="setting">
+			<span>
+				<span class="label" id="languages">Also accept names in</span>
+				<span class="muted hint">English always counts. Add languages you know the country names in.</span>
+			</span>
+			<div class="chips languages" role="group" aria-labelledby="languages">
+				{#each LANGUAGES as lang (lang.code)}
+					<button class="chip" aria-pressed={settings.languages?.includes(lang.code) ?? false} onclick={() => toggleLanguage(lang.code)}
+						>{lang.name}</button
+					>
+				{/each}
+			</div>
+		</div>
 		<label class="setting toggle">
 			<span>
 				<span class="label">Sound</span>
@@ -277,6 +296,16 @@
 		background: var(--fg);
 		color: var(--bg);
 		border-color: var(--fg);
+	}
+
+	.languages {
+		gap: 6px;
+	}
+
+	.languages .chip {
+		min-height: 30px;
+		padding: 0 12px;
+		font-size: var(--t13);
 	}
 
 	.toggle {

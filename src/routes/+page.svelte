@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { BRAND, TAGLINE } from '#lib/brand.ts';
+	import { BRAND, ORIGIN, TAGLINE } from '#lib/brand.ts';
 	import PlayScreen, { type Engine } from '#lib/play/PlayScreen.svelte';
 	import type { PlayContext } from '#lib/play/engine.ts';
 	import type { Deck } from '#lib/play/game.svelte.ts';
@@ -42,6 +42,15 @@
 		name="description"
 		content="See a flag, type the country, and a glass globe flies there. Spaced repetition, a daily challenge, no account."
 	/>
+	<link rel="canonical" href="{ORIGIN}/" />
+	<meta property="og:type" content="website" />
+	<meta property="og:title" content="{BRAND} · {TAGLINE}" />
+	<meta property="og:description" content="See a flag, type the country, and a glass globe flies there." />
+	<meta property="og:url" content="{ORIGIN}/" />
+	<meta property="og:image" content="{ORIGIN}/og.png" />
+	<meta property="og:image:width" content="1200" />
+	<meta property="og:image:height" content="630" />
+	<meta name="twitter:card" content="summary_large_image" />
 </svelte:head>
 
 <h1 class="visually-hidden">{BRAND}: name the flag</h1>

@@ -14,6 +14,7 @@ export { Game, ListDeck } from './game.svelte.ts';
 export { DailyDeck, LearnDeck, MODES, SpeedDeck } from './decks.ts';
 export { dailySet, utcDay } from '#lib/learn/daily.ts';
 export { feedback } from './feedback.ts';
+export { extraNames } from './languages.ts';
 export { Learner, Planner };
 // The parts of the play screen that only show once the quiz is running.
 export { default as Reveal } from './Reveal.svelte';

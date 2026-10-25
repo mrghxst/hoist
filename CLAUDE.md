@@ -12,7 +12,7 @@ pnpm install          # pnpm 10, pinned in packageManager
 pnpm dev              # dev server on :5173
 pnpm build            # static site into build/
 pnpm preview          # serve build/ on :4173
-pnpm check            # svelte-kit sync + svelte-check (TypeScript 6, strict)
+pnpm check            # svelte-check (TypeScript 6, strict), then the service worker
 pnpm test             # Vitest units in tests/
 pnpm test:e2e         # Playwright in e2e/ (starts preview on :4173)
 pnpm size             # play-page JS budget (75 KB gzipped)
@@ -22,6 +22,7 @@ pnpm audit:data       # data audits on the committed files
 node scripts/dev/flights.ts <dir> --gpu [--throttle]   # globe frame times
 node scripts/dev/simulate.ts [days]                     # simulated learner
 pnpm fonts            # re-subset Geist (needs Python fonttools + brotli)
+pnpm icons            # app icons in static/icons/ from the favicon's mark
 ```
 
 ## SvelteKit 3 notes
@@ -50,6 +51,7 @@ pnpm fonts            # re-subset Geist (needs Python fonttools + brotli)
 src/app.html            shell; inline theme script (no flash), font preload
 src/app.css             tokens (PROMPT.md 6.1), glass panels, base styles
 src/lib/brand.ts        product name and domain (one place)
+src/lib/flags.ts        proportions, the non-rectangular flag
 src/lib/globe/          Globe class (Canvas 2D), sphere.ts renderer, camera,
                         data loading, palette from the CSS tokens
 src/lib/match/          normalising, answer matching (countries, capitals), hints
@@ -61,10 +63,15 @@ src/lib/play/           the quiz: Game and decks, PlayScreen (shared by Play
                         engine entry, scopes and practice modes
 src/lib/data/           generated data (do not edit by hand), types.ts
 src/lib/store/          localStorage access (storage.ts), theme state
+src/lib/server/         prerender only: the catalog of flags and countries,
+                        share images (resvg)
 src/lib/ui/             TopBar, ThemeToggle, small components
 src/routes/             /, /daily, /practice, /practice/[mode], /progress,
-                        /flags, /about, /lookalikes
+                        /flags, /flags/[slug] (+ og.png), /about,
+                        /lookalikes, /og.png, /sitemap.xml, /robots.txt
+src/service-worker/     offline: precache and fetch strategy; own tsconfig
 static/fonts/           Geist subset (OFL), versioned file names
+static/icons/           app icons (`pnpm icons`); the manifest is in static/
 static/_headers         Cloudflare cache headers
 wrangler.jsonc          Cloudflare Workers static assets from build/
 tests/  e2e/            Vitest units, Playwright end-to-end

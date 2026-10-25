@@ -2,6 +2,9 @@
 	/**
 	 * A flag at its true proportions, inside a 1 px hairline so white flags
 	 * read on white (PROMPT.md 6.2). Never cropped, corners at most 2 px.
+	 * No hairline on a flag taller than it is wide: the only one is Nepal's,
+	 * which is not a rectangle, and a box would draw a shape it does not have.
+	 * Going by the ratio (already in the page) names no country.
 	 */
 	interface Props {
 		src: string;
@@ -25,6 +28,7 @@
 
 <img
 	class="flag"
+	class:bare={ratio < 1}
 	{src}
 	{alt}
 	width={Math.round(w)}
@@ -50,5 +54,10 @@
 		outline: 1px solid var(--overlay);
 		outline-offset: 0;
 		user-select: none;
+	}
+
+	.bare {
+		outline: none;
+		border-radius: 0;
 	}
 </style>

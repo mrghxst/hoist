@@ -78,14 +78,21 @@ building. Choices the brief does not cover are in [decisions.md](decisions.md).
 - [x] Streak glow (M3), optional sound, vibration (settings)
 - [x] Schema v2 with step migrations
 
-## M6: Pages, offline, languages
-- [ ] `/flags` grid, 197 flag pages with static globes and OG images
-- [ ] `/lookalikes`, `/about` with credits
-- [ ] Offline and install, "Also accept names in", sitemap, robots
+## M6: Pages, offline, languages (done 2026-10-25)
+- [x] `/flags` grid with search, region filter and sort; 216 flag pages (197
+      countries and 19 territories) with static globes and share images
+- [x] `/lookalikes`, `/about` with credits
+- [x] Offline after one visit (service worker), installable (manifest,
+      icons), "Also accept names in" (23 languages), sitemap, robots
+- [x] e2e: the quiz offline after a reload, flag grid search and filters,
+      a flag page, 1200×630 share images, sitemap and robots, a Japanese
+      answer with the setting on
+- [x] Lighthouse 100 / 100 / 100 / 100, LCP 1.4 s; initial JS 47.5 KB
 
 ## M7: Polish and launch
 - [ ] Accessibility, performance, copy and visual passes
-- [ ] Error states, 404, weekly flag-update workflow
+- [ ] Error states (storage blocked, geometry failed), 404, weekly
+      flag-update workflow
 - [ ] README with screenshots
 
 ## Owner steps
