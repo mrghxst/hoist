@@ -16,7 +16,7 @@ const NE_URL =
 /** mapshaper `-simplify` percentages, tuned to the size targets in 8.5. */
 const OVERVIEW_SIMPLIFY = '6%';
 const DETAIL_SIMPLIFY = '28%';
-const DOT_COUNT = 20000;
+const DOT_COUNT = 40000;
 /** Zoom limits (4.2) and the share of the globe radius a country should fill. */
 const ZOOM_MIN = 0.9;
 const ZOOM_MAX = 4;

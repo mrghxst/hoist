@@ -25,13 +25,17 @@ building. Choices the brief does not cover are in [decisions.md](decisions.md).
 - [x] `pnpm data` from an empty `data/raw` (240 s), spot checks, Syria 2025,
       Nepal not a rectangle, Qatar 28:11
 
-## M2: The globe
-- [ ] Look (glass body, far side, dots, solid land, graticule, rim, halo)
-- [ ] Fly-to with one interruptible camera, framing from main landmass
-- [ ] Markers, labels, tiny-country rings
-- [ ] Drag / zoom / inertia, reduced motion, idle rotation
-- [ ] Detail geometry swap, static SVG globes
-- [ ] Frame-time budgets
+## M2: The globe (done 2026-10-25)
+- [x] Look: glass body, far side through the glass, dot field fading to the
+      edge, solid land with hairline borders from zoom 2, graticule, rim, halo
+- [x] Fly-to on one interruptible camera, framed on the main landmass
+- [x] Markers, labels on opposite sides, two pulses, tiny-country rings
+- [x] Drag (versor) with inertia, wheel/pinch/double-click zoom, arrow keys,
+      reduced motion, idle rotation that pauses for 8 s
+- [x] Detail geometry swap past zoom 1.8, static SVG globes (432 files)
+- [x] Japan → Brazil → Monaco → New Zealand → France checked in light, dark
+      and phone screenshots
+- [x] Frame times 2.5 ms (budget 6), 10.1 ms at 4× throttle (budget 14)
 
 ## M3: The core loop
 - [ ] Flag card, answer field, matching (150+ cases), result, globe reveal

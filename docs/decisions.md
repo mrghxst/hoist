@@ -121,3 +121,45 @@ medium; the rest are hard. That gives 40 / 54 / 103.
 landmass is under 20 px across at its framed zoom on a 170 px-radius globe.
 That is 39 countries, including Cyprus, Kosovo and Luxembourg; the globe also
 checks the real on-screen size at run time.
+
+## M2
+
+**A small sphere renderer instead of d3's projection streams.** Drawing land,
+borders and the far side through `geoPath` cost 19–35 ms per frame, mostly
+d3 re-testing every ring with spherical trigonometry and adaptive resampling.
+`src/lib/globe/sphere.ts` turns every vertex into a unit vector once; a frame
+then costs a few multiplies per vertex. Rings are clipped at the horizon and
+the visible pieces are rejoined along the rim, the same way d3's clipRejoin
+works (an earlier version that followed the hidden vertices round the rim
+broke when they passed near the centre of the disc). The far side is the same
+projection with the visibility test flipped, which `tests/sphere.test.ts`
+checks against d3's `reflectX` projection from the brief. d3 is still used to
+invert pointer positions while dragging. This is still Canvas 2D; no WebGL.
+
+**Lighter outlines while moving.** During flights, drags and inertia the land
+uses every 3rd vertex, borders every 4th and the far side every 8th; the full
+outlines come back at rest.
+
+**Frame times** (production build, five flights Japan → Brazil → Monaco →
+New Zealand → France, `scripts/dev/flights.ts`): mean 2.5 ms, p95 4.0 ms; with
+4× CPU throttling mean 10.1 ms, p95 15.5 ms. Measured in headless Chromium
+with GPU rasterisation on (`--gpu`), since a real laptop rasterises canvas on
+the GPU; headless Chromium otherwise uses SwiftShader. Budgets: 6 ms and 14 ms.
+
+**Denser land dots.** The Fibonacci lattice has 40,000 points instead of
+about 20,000; at 20,000 the continents read as a sparse grid. 11,518 dots,
+42 KB gzipped, overview plus dots 144 KB (budget 180 KB).
+
+**Globe size.** The radius at zoom 1 is 40% of half the smaller side of the
+stage, so at zoom 2.5 the globe just fits and its edge stays in view. The play
+page starts at zoom 1.35 so the idle globe is not small.
+
+**Split bundles after all.** M0 used `bundleStrategy: 'single'` to get LCP
+under budget on the empty page, but `single` inlines dynamic imports, which put
+the globe and all data in the initial JS (99 KB). Back to split output, with
+the globe as a lazy chunk and quiz data fetched as a hashed JSON file: the play
+page's initial JS is 38.8 KB gzipped. LCP is re-checked in M3.
+
+**Static globes** are 240 px SVGs with a 7,000-point lattice, dots drawn as
+zero-length square-capped subpaths, and a coarse graticule: 17.7 KB average,
+432 files. Flag pages show the light or dark one by theme.

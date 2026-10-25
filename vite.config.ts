@@ -11,7 +11,6 @@ export default defineConfig({
 				entries: ['*'],
 				handleHttpError: 'fail'
 			},
-			output: { bundleStrategy: 'single' },
 			inlineStyleThreshold: 8192
 		})
 	],

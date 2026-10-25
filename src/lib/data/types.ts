@@ -81,3 +81,32 @@ export interface LookalikeGroup {
 	members: string[];
 	tip: string;
 }
+
+/** The slim per-country record the quiz loads (src/lib/data/game.json). */
+export interface GameCountry {
+	id: string;
+	slug: string;
+	name: string;
+	names: string[];
+	continent: Continent;
+	region: Region;
+	capital: Capital;
+	largest: City;
+	same: boolean;
+	view: View;
+	tiny: boolean;
+	difficulty: 1 | 2 | 3;
+	colours: string[];
+	pack: 'core' | 'territories';
+	/** Quiz image: the WebP fallback when there is one, else the SVG. */
+	flag: string;
+	ratio: number;
+}
+
+export interface GameData {
+	countries: GameCountry[];
+	lookalikes: LookalikeGroup[];
+	ambiguous: Record<string, string[]>;
+	starter: string[];
+	familiar: string[];
+}
