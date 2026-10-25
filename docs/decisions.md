@@ -486,3 +486,12 @@ scrolls sideways. The level dots load after first paint.
 `#lib/brand.ts` (222 URLs: the pages and the 216 flags).
 
 **Removed `d3-inertia`:** the globe's drag has its own inertia since M2.
+
+**The idle guard decides on the first frame (fix after M6).** CI still lost
+performance points to the globe: without a GPU, each turning frame spent
+12 to 14 ms in Chrome's rendering after the draw, and the guard needed three
+of them before it stopped. The draw itself costs the same with or without a
+GPU (about 3.5 ms); the rendering after it is what differs (0.5 to 2 ms with
+one). So the first frame with the map is drawn still and measured, and the
+globe only starts turning if its rendering took 6 ms or less. The
+three-frame check stays for devices that render fast but draw slowly.
