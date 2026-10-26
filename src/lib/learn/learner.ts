@@ -9,7 +9,8 @@ import { level, recall, review, type Level } from './scheduler.ts';
 import type { ProgressStore } from './store.ts';
 import { localDay, streak, utcDay } from './daily.ts';
 import { better } from './transfer.ts';
-import type { CardKey, CardMode, DailyResult, DayLog, Progress, Settings, SpeedResult, StoredCard } from './types.ts';
+import { MAX_RUNS } from './schema.ts';
+import type { CardKey, CardMode, DailyResult, DayLog, Progress, RunResult, Settings, SpeedResult, StoredCard } from './types.ts';
 
 export const DEFAULT_NEW_PER_DAY = 10;
 
@@ -168,6 +169,30 @@ export class Learner {
 		this.progress.updated = result.at;
 		this.store.save(this.progress);
 		this.changed();
+		return best;
+	}
+
+	/**
+	 * Records a finished run on Play. Returns whether it is the best run of
+	 * that length so far (more right, then faster), and the one it beat.
+	 */
+	saveRun(run: RunResult): { best: boolean; previous?: RunResult } {
+		const previous = this.bestRun(run.n);
+		this.progress.runs = [...this.progress.runs, run].slice(-MAX_RUNS);
+		this.progress.updated = run.at;
+		this.store.save(this.progress);
+		this.changed();
+		return { best: !previous || previous.right < run.right || (previous.right === run.right && previous.ms > run.ms), previous };
+	}
+
+	/** Runs of one length, oldest first. */
+	runs(n: number): RunResult[] {
+		return this.progress.runs.filter((r) => r.n === n);
+	}
+
+	bestRun(n: number): RunResult | undefined {
+		let best: RunResult | undefined;
+		for (const r of this.runs(n)) if (!best || r.right > best.right || (r.right === best.right && r.ms < best.ms)) best = r;
 		return best;
 	}
 

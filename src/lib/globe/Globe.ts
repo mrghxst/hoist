@@ -6,7 +6,7 @@
 import { geoOrthographic, type GeoProjection } from 'd3-geo';
 import type { Feature, MultiLineString, MultiPolygon, Polygon } from 'geojson';
 import versor from 'versor';
-import { clampZoom, flightDuration, flightPath, smoothstep, wrap, ZOOM_MAX, ZOOM_MIN, type Camera } from './camera.ts';
+import { clampZoom, flightDuration, flightPath, focusZoom, smoothstep, SOLID_FROM, SOLID_ZOOM, wrap, ZOOM_MAX, ZOOM_MIN, type Camera } from './camera.ts';
 import type { GlobeData } from './data.ts';
 import { readPalette, type Palette } from './palette.ts';
 import { frameOf, graticuleShape, project, shapeOf, trace, type Frame, type Shape } from './sphere.ts';
@@ -47,11 +47,22 @@ const DPR_CAP = 2;
 const AUTO_SPEED = 3 / 1000; // degrees per ms
 /**
  * Idle rotation is decoration: if a frame takes longer than this even at its
- * quickest (a slow phone, or Chrome without a GPU drawing the canvas on the
- * main thread), the globe stays still until the player moves it, so the
- * page stays responsive and the device cool (PROMPT.md 4.2, 10).
+ * quickest (a slow phone, or Chrome without a GPU, which uploads the canvas
+ * on the main thread), the globe stays still until the player moves it, so
+ * the page stays responsive and the device cool (PROMPT.md 4.2, 10).
+ *
+ * A frame's cost is the drawing plus the rendering Chrome does after it
+ * (paint and commit): a message posted at the end of the frame callback only
+ * runs once that is done. With a GPU that part is 0.5 to 2 ms; without one
+ * it is 12 to 14 ms for a phone-sized canvas, however little was drawn.
+ *
+ * So the first frame with the map, which is drawn still, is measured first:
+ * if its rendering alone is over COMMIT_BUDGET the globe never starts
+ * turning, and no slow frame is spent finding out. Devices that render
+ * quickly but draw slowly stop after IDLE_SAMPLES turning frames.
  */
 const IDLE_FRAME_BUDGET = 12;
+const COMMIT_BUDGET = 6;
 const IDLE_SAMPLES = 3;
 const IDLE_RESUME = 8000;
 const PULSE_MS = 1100;
@@ -104,6 +115,9 @@ export class Globe {
 	private frameTimes: number[] = [];
 	private idleFrames: number[] = [];
 	private idleTooSlow = false;
+	/** Whether the first frame with the map has been measured (see COMMIT_BUDGET). */
+	private probed: 'no' | 'waiting' | 'yes' = 'no';
+	private frameProbe: MessageChannel | null = null;
 	/** Per-layer timings when profiling (dev tool). */
 	profile: Record<string, number> | null = null;
 	private mark(name: string, t: number): number {
@@ -167,7 +181,7 @@ export class Globe {
 		this.target = target;
 		this.autoRotate = false;
 		this.inertia = null;
-		const to: Camera = { lon: target.centre[0], lat: target.centre[1], roll: 0, zoom: clampZoom(target.zoom) };
+		const to: Camera = { lon: target.centre[0], lat: target.centre[1], roll: 0, zoom: focusZoom(target.zoom) };
 		this.flight?.resolve();
 		this.flight = null;
 		if (reducedMotion()) return this.jump(to);
@@ -246,6 +260,7 @@ export class Globe {
 	destroy() {
 		this.destroyed = true;
 		cancelAnimationFrame(this.frame);
+		this.frameProbe?.port1.close();
 		if (this.idleTimer) clearTimeout(this.idleTimer);
 		for (const off of this.cleanup) off();
 		this.flight?.resolve();
@@ -283,7 +298,7 @@ export class Globe {
 			this.cam.lat = Math.max(-89, Math.min(89, this.cam.lat + this.inertia.vLat * dt));
 			if (Math.hypot(this.inertia.vLon, this.inertia.vLat) < 0.002) this.inertia = null;
 			else moving = true;
-		} else if (this.autoRotate && !this.idleTooSlow && !this.drag) {
+		} else if (this.autoRotate && !this.idleTooSlow && !this.drag && this.probed === 'yes') {
 			if (now - this.lastInteraction > IDLE_RESUME) {
 				this.cam.lon = wrap(this.cam.lon + AUTO_SPEED * dt);
 				moving = true;
@@ -301,18 +316,41 @@ export class Globe {
 		this.draw(now);
 		const spent = performance.now() - t0;
 		if (moving || this.drag) this.frameTimes.push(spent);
-		if (idle && this.data && this.idleFrames.length < IDLE_SAMPLES) {
-			this.idleFrames.push(spent);
-			if (this.idleFrames.length === IDLE_SAMPLES && Math.min(...this.idleFrames) > IDLE_FRAME_BUDGET) {
-				this.idleTooSlow = true;
-				moving = false;
-			}
-		}
+		if (this.data && this.probed === 'no') {
+			this.probed = 'waiting';
+			this.measureFrame(spent, true);
+		} else if (idle && this.data && this.idleFrames.length < IDLE_SAMPLES) this.measureFrame(spent, false);
 		if (this.frameTimes.length > 600) this.frameTimes.splice(0, 300);
 
 		const pulsing = !!this.markers && !reducedMotion() && now - this.markersAt < PULSE_MS * PULSES;
 		if (moving || pulsing || this.fade) this.invalidate();
 		else this.lastFrame = 0;
+	}
+
+	/** Adds the rendering after this frame to its drawing time (see IDLE_FRAME_BUDGET). */
+	private measureFrame(drawing: number, first: boolean) {
+		if (typeof MessageChannel === 'undefined') {
+			this.probed = 'yes';
+			return;
+		}
+		if (!this.frameProbe) {
+			this.frameProbe = new MessageChannel();
+			this.frameProbe.port1.onmessage = (e: MessageEvent<[number, number, boolean]>) => {
+				const [draw, end, isFirst] = e.data;
+				const rendering = performance.now() - end;
+				if (isFirst) {
+					this.probed = 'yes';
+					if (rendering > COMMIT_BUDGET) this.idleTooSlow = true;
+					else this.invalidate();
+					return;
+				}
+				this.idleFrames.push(draw + rendering);
+				if (this.idleFrames.length === IDLE_SAMPLES && Math.min(...this.idleFrames) > IDLE_FRAME_BUDGET) {
+					this.idleTooSlow = true;
+				}
+			};
+		}
+		this.frameProbe.port2.postMessage([drawing, performance.now(), first]);
 	}
 
 	private jump(to: Camera): Promise<void> {
@@ -390,7 +428,7 @@ export class Globe {
 		const cx = this.cx;
 		const cy = this.cy;
 		const z = this.cam.zoom;
-		const solid = smoothstep(1.6, 2.2, z); // dots → solid land
+		const solid = smoothstep(SOLID_FROM, SOLID_ZOOM, z); // dots → solid land
 		const farSide = 1 - smoothstep(1.3, 2, z); // far side fades by zoom 2
 		const data = this.data;
 		const countries = data?.countries;

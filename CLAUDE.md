@@ -1,6 +1,7 @@
 # Hoist: working on the code
 
-[PROMPT.md](PROMPT.md) is the product brief and the source of truth.
+[PROMPT.md](PROMPT.md) is the product brief and the source of truth, except
+where the owner's later changes (docs/decisions.md, M8 onwards) override it.
 [docs/plan.md](docs/plan.md) tracks the milestones, [docs/decisions.md](docs/decisions.md)
 records every choice the brief does not cover, and [docs/research.md](docs/research.md)
 holds the verified facts behind the brief.
@@ -12,16 +13,20 @@ pnpm install          # pnpm 10, pinned in packageManager
 pnpm dev              # dev server on :5173
 pnpm build            # static site into build/
 pnpm preview          # serve build/ on :4173
-pnpm check            # svelte-kit sync + svelte-check (TypeScript 6, strict)
+pnpm check            # svelte-check (TypeScript 6, strict), then the service worker
 pnpm test             # Vitest units in tests/
 pnpm test:e2e         # Playwright in e2e/ (starts preview on :4173)
 pnpm size             # play-page JS budget (75 KB gzipped)
-pnpm lighthouse       # Lighthouse CI on build/ (needs Chrome; CHROME_PATH works)
+pnpm lighthouse       # Lighthouse CI on build/ (needs Chrome; CHROME_PATH works).
+                      # The hard gate for performance and LCP: CI only warns
 pnpm data             # the data pipeline (needs network on first run)
 pnpm audit:data       # data audits on the committed files
 node scripts/dev/flights.ts <dir> --gpu [--throttle]   # globe frame times
 node scripts/dev/simulate.ts [days]                     # simulated learner
+node scripts/dev/readme-shots.ts                        # README screenshots (needs pnpm preview)
+node scripts/data/flag-update.ts check                  # flags changed on Commons (weekly workflow)
 pnpm fonts            # re-subset Geist (needs Python fonttools + brotli)
+pnpm icons            # app icons in static/icons/ from the favicon's mark
 ```
 
 ## SvelteKit 3 notes
@@ -50,21 +55,29 @@ pnpm fonts            # re-subset Geist (needs Python fonttools + brotli)
 src/app.html            shell; inline theme script (no flash), font preload
 src/app.css             tokens (PROMPT.md 6.1), glass panels, base styles
 src/lib/brand.ts        product name and domain (one place)
+src/lib/flags.ts        proportions, the non-rectangular flag
 src/lib/globe/          Globe class (Canvas 2D), sphere.ts renderer, camera,
                         data loading, palette from the CSS tokens
 src/lib/match/          normalising, answer matching (countries, capitals), hints
 src/lib/learn/          spaced repetition: grading, FSRS wrapper, session queue,
                         introduction order, planner, learner, store, schema
                         and migrations, export / import
-src/lib/play/           the quiz: Game and decks, PlayScreen (shared by Play
-                        and Practice), Reveal and Pick (lazy), the lazy
-                        engine entry, scopes and practice modes
+src/lib/play/           the quiz: Game and decks, PlayScreen (shared by Play,
+                        Daily and Practice), Reveal, Pick, RunResults and
+                        RunChart (lazy), the lazy engine entry, scopes,
+                        practice modes, Play's runs (run.ts, RunBar)
 src/lib/data/           generated data (do not edit by hand), types.ts
 src/lib/store/          localStorage access (storage.ts), theme state
+src/lib/server/         prerender only: the catalog of flags and countries,
+                        share images (resvg), Play's first-flag script
+src/hooks.server.ts     adds that script to Play's prerendered page
 src/lib/ui/             TopBar, ThemeToggle, small components
 src/routes/             /, /daily, /practice, /practice/[mode], /progress,
-                        /flags, /about, /lookalikes
+                        /flags, /flags/[slug] (+ og.png), /about,
+                        /lookalikes, /og.png, /sitemap.xml, /robots.txt
+src/service-worker/     offline: precache and fetch strategy; own tsconfig
 static/fonts/           Geist subset (OFL), versioned file names
+static/icons/           app icons (`pnpm icons`); the manifest is in static/
 static/_headers         Cloudflare cache headers
 wrangler.jsonc          Cloudflare Workers static assets from build/
 tests/  e2e/            Vitest units, Playwright end-to-end
@@ -84,7 +97,13 @@ reports/                generated review reports
 - Every screen is composed around the middle of the viewport.
 - Wrap every storage access in try/catch (`src/lib/store/storage.ts`).
 - Never leak the answer: not in image URLs, alt text, the title, or the DOM.
+- Watch the JavaScript every page loads first (`pnpm size`, `pnpm lighthouse`):
+  code imported by two pages lands in the shared file, and every Svelte
+  runtime helper (`{@html}`, `bind:clientWidth`, ...) lands in the Svelte
+  file even when only lazy code uses it. A few hundred bytes there cost LCP.
 - Look at changes in a browser in light and dark, at 375 px and 1440 px.
+- `pnpm preview` keeps the build it started with: restart it after
+  `pnpm build`, or pages load old chunk names and fail.
 
 ## Agent skills
 

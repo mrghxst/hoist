@@ -142,10 +142,11 @@
 	<div
 		class="focus"
 		bind:this={wrapper}
-		tabindex="0"
-		role="application"
-		aria-roledescription="globe"
-		aria-label="{label}. Arrow keys turn it, plus and minus zoom."
+		tabindex={failed ? -1 : 0}
+		role={failed ? undefined : 'application'}
+		aria-roledescription={failed ? undefined : 'globe'}
+		aria-label={failed ? undefined : `${label}. Arrow keys turn it, plus and minus zoom.`}
+		aria-hidden={failed || undefined}
 	>
 		<canvas bind:this={canvas} aria-hidden="true"></canvas>
 	</div>
@@ -233,11 +234,28 @@
 		background: var(--overlay);
 	}
 
-	/* On phones the console can grow over the bottom of the globe. */
-	@media (max-width: 899px) {
+	/* Below 1200 px the console (860 px wide on desktops, full width on
+	   phones) can reach the bottom corners, so the controls go to the top. */
+	@media (max-width: 1199px) {
 		.controls {
 			top: 12px;
 			bottom: auto;
+		}
+	}
+
+	/* Phones: Play's mode bar has the top; the globe is a band above the
+	   console there, so its bottom corner is free again. */
+	@media (max-width: 699px) {
+		.controls {
+			top: auto;
+			bottom: 12px;
+		}
+	}
+
+	/* From 900 px the play page's globe runs under the top bar. */
+	@media (min-width: 900px) and (max-width: 1199px) {
+		.controls {
+			top: calc(var(--bar-h) + 28px);
 		}
 	}
 

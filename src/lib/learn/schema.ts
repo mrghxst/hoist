@@ -2,12 +2,14 @@
  * Reading the stored object safely, and migrating old shapes (PROMPT.md 3.4).
  * Pure functions: no storage access here, so they are easy to test.
  */
-import type { DailyResult, DayLog, Progress, Settings, SpeedResult, StoredCard } from './types.ts';
+import type { DailyResult, DayLog, Progress, RunResult, Settings, SpeedResult, StoredCard } from './types.ts';
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
+/** Runs kept: about 60 bytes each, so the store stays well under 200 KB. */
+export const MAX_RUNS = 500;
 
 export function emptyProgress(now = Date.now()): Progress {
-	return { v: 2, settings: {}, cards: {}, days: {}, daily: {}, best: {}, updated: now };
+	return { v: 3, settings: {}, cards: {}, days: {}, daily: {}, best: {}, runs: [], updated: now };
 }
 
 export type Migrated =
@@ -66,6 +68,23 @@ function cleanSpeed(x: unknown): SpeedResult | null {
 	return { right: right as number, total: total as number, ms: ms as number, at: at as number };
 }
 
+function cleanRun(x: unknown): RunResult | null {
+	if (!isObject(x)) return null;
+	const { n, right, ms, at, marks, seed } = x;
+	if (![n, right, ms, at, seed].every(finite) || typeof marks !== 'string' || !/^[GR]*$/.test(marks)) return null;
+	if ((n as number) < 1 || marks.length !== n || (right as number) > (n as number)) return null;
+	return { n: n as number, right: right as number, ms: ms as number, at: at as number, marks, seed: (seed as number) >>> 0 };
+}
+
+export function cleanRuns(x: unknown): RunResult[] {
+	if (!Array.isArray(x)) return [];
+	return x
+		.map(cleanRun)
+		.filter((r): r is RunResult => !!r)
+		.sort((a, b) => a.at - b.at)
+		.slice(-MAX_RUNS);
+}
+
 export function cleanSettings(x: unknown): Settings {
 	if (!isObject(x)) return {};
 	const out: Settings = {};
@@ -76,6 +95,8 @@ export function cleanSettings(x: unknown): Settings {
 	if (Array.isArray(x.languages)) out.languages = x.languages.filter((l): l is string => typeof l === 'string' && /^[a-z]{3}$/.test(l));
 	if (typeof x.sound === 'boolean') out.sound = x.sound;
 	if (typeof x.haptics === 'boolean') out.haptics = x.haptics;
+	if (typeof x.introduce === 'boolean') out.introduce = x.introduce;
+	if (Number.isInteger(x.runLength) && (x.runLength as number) >= 3 && (x.runLength as number) <= 300) out.runLength = x.runLength as number;
 	return out;
 }
 
@@ -97,10 +118,12 @@ function cleanMap<T>(x: unknown, key: RegExp, clean: (v: unknown) => T | null): 
  * - v0 (M0–M3): `{ settings }` only, no version field.
  * - v1 (M4): cards and days.
  * - v2 (M5): daily results and speed-run bests.
+ * - v3 (M8): Play's runs.
  */
 export const STEPS: Record<number, (raw: Record<string, unknown>) => Record<string, unknown>> = {
 	0: (raw) => ({ v: 1, settings: raw.settings, cards: {}, days: {}, updated: raw.updated }),
-	1: (raw) => ({ ...raw, v: 2, daily: {}, best: {} })
+	1: (raw) => ({ ...raw, v: 2, daily: {}, best: {} }),
+	2: (raw) => ({ ...raw, v: 3, runs: [] })
 };
 
 /**
@@ -118,12 +141,13 @@ export function migrate(raw: unknown, now = Date.now()): Migrated {
 
 function clean(raw: Record<string, unknown>, now: number): Progress {
 	return {
-		v: 2,
+		v: 3,
 		settings: cleanSettings(raw.settings),
 		cards: cleanMap(raw.cards, CARD_KEY, cleanCard),
 		days: cleanMap(raw.days, DAY_KEY, cleanDay),
 		daily: cleanMap(raw.daily, DAY_KEY, cleanDaily),
 		best: cleanMap(raw.best, SCOPE_KEY, cleanSpeed),
+		runs: cleanRuns(raw.runs),
 		updated: finite(raw.updated) ? raw.updated : now
 	};
 }

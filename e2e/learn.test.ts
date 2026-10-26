@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import type { GameData } from '../src/lib/data/types.ts';
+import { parseSeed, runIds, runPool } from '../src/lib/play/run.ts';
 
 const data = JSON.parse(readFileSync('src/lib/data/game.json', 'utf8')) as GameData;
 const byName = new Map(data.countries.map((c) => [c.name, c]));
@@ -20,22 +21,31 @@ test.beforeEach(async ({ page }) => {
 	});
 });
 
-async function starterRound(page: Page) {
-	await page.goto('/');
+/** A run of ten (a challenge link, so the flags are known), all right. */
+async function playRun(page: Page) {
+	await page.goto('/?n=10&seed=abc');
 	await ready(page);
 	const field = page.locator('#answer');
-	for (const id of data.starter) {
+	for (const id of runIds(runPool(data), parseSeed('abc')!, 10)) {
 		await field.fill(data.countries.find((c) => c.id === id)!.name);
 		await field.press('Enter');
 		await expect(page.locator('.verdict')).toContainText('✓');
-		await field.press('Enter');
 	}
-	await expect(page.getByRole('heading', { name: '10 of 10 right.' })).toBeVisible();
+	await expect(page.getByRole('heading', { name: /10 of 10/ })).toBeVisible();
 }
 
-test('after the starter round a region session introduces new flags with study cards', async ({ page }) => {
-	await starterRound(page);
-	await page.getByRole('button', { name: 'Europe' }).click();
+test('new flags are asked straight away; "Show new flags first" adds study cards', async ({ page }) => {
+	await page.goto('/practice/europe');
+	await ready(page);
+	await expect(page.getByRole('img', { name: 'Flag to name' })).toBeVisible();
+	await expect(page.locator('.eyebrow')).toHaveCount(0);
+
+	await page.goto('/practice');
+	// Settings save once the page has loaded progress (the counts show).
+	await expect(page.getByRole('link', { name: /Learn new/ })).toContainText('new');
+	await page.getByRole('checkbox', { name: /Show new flags first/ }).check();
+	await page.goto('/practice/europe');
+	await ready(page);
 	await expect(page.locator('.eyebrow')).toHaveText('New flag');
 	const first = await page.locator('.verdict').textContent();
 	expect(byName.get(first!.trim())?.region).toBe('europe');
@@ -43,22 +53,21 @@ test('after the starter round a region session introduces new flags with study c
 	await expect(page.locator('.verdict')).not.toHaveText(first!);
 });
 
-test('progress survives a reload and Play goes straight to review', async ({ page }) => {
-	await starterRound(page);
-	await page.getByRole('button', { name: 'Learn all 197' }).click();
-	await page.reload();
-	await ready(page);
-	await expect(page.locator('.meta')).toContainText('All flags');
+test('a run is scheduled, and Today picks up from there', async ({ page }) => {
+	await playRun(page);
 	await page.goto('/progress');
 	await expect(page.locator('.totals')).toHaveAttribute('aria-busy', 'false');
 	const learning = Number(await page.locator('.totals div:nth-child(2) dd').textContent());
 	const fresh = Number(await page.locator('.totals div:nth-child(3) dd').textContent());
 	expect(learning).toBe(10);
 	expect(fresh).toBe(187);
+	await page.goto('/practice/today');
+	await ready(page);
+	await expect(page.locator('.meta')).toContainText('Today · All flags');
 });
 
 test('export, reset and import restore progress exactly', async ({ page }) => {
-	await starterRound(page);
+	await playRun(page);
 	await page.goto('/progress');
 	await expect(page.locator('.totals')).toHaveAttribute('aria-busy', 'false');
 	const before = await page.evaluate(() => JSON.parse(localStorage.getItem('hoist:v1')!));
@@ -77,14 +86,9 @@ test('export, reset and import restore progress exactly', async ({ page }) => {
 	expect(after.days).toEqual(before.days);
 });
 
-test('Capitals: study the capital, then type it', async ({ page }) => {
+test('Capitals: see the flag and the name, type the capital', async ({ page }) => {
 	await page.goto('/practice/capitals');
 	await ready(page);
-	// Five study cards, then the batch is quizzed.
-	for (let i = 0; i < 5; i++) {
-		await expect(page.locator('.eyebrow')).toHaveText('New flag');
-		await page.keyboard.press('Enter');
-	}
 	await expect(page.locator('.asking')).toBeVisible();
 	const country = (await page.locator('.asking strong').textContent())!.trim();
 	const capital = byName.get(country)!.capital.name;
@@ -117,10 +121,6 @@ test('Reverse: the country is on the globe, its name is not in the page', async 
 test('Easy mode: pick with the number keys', async ({ page }) => {
 	await page.goto('/practice/easy');
 	await expect(page.locator('#answer')).toHaveCount(0);
-	for (let i = 0; i < 5; i++) {
-		await expect(page.locator('.eyebrow')).toHaveText('New flag');
-		await page.keyboard.press('Enter');
-	}
 	const options = page.getByRole('group', { name: /Pick the/ });
 	await expect(options.getByRole('button')).toHaveCount(4);
 	await page.keyboard.press('1');
@@ -133,6 +133,7 @@ test('Practice lists the modes with counts', async ({ page }) => {
 	await page.goto('/practice');
 	await expect(page.getByRole('link', { name: /Review/ })).toContainText('0 due');
 	await expect(page.getByRole('link', { name: /Learn new/ })).toContainText('197 new');
+	await expect(page.getByRole('link', { name: /Today/ })).toContainText('10 to do');
 	await page.getByRole('button', { name: '20' }).click();
 	expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hoist:v1')!).settings.newPerDay)).toBe(20);
 });

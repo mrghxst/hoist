@@ -348,6 +348,17 @@ and Lighthouse counted every frame as blocking: Performance was 72–75 in CI
 while LCP passed. 12 ms is where a frame becomes a "long task" under
 Lighthouse's 4× CPU slowdown. CI now uploads the Lighthouse reports.
 
+A first version timed only the JavaScript drawing, which was 3 to 4 ms in
+CI too, and CI stayed at Performance 74 with TBT 1.5 s. The CI summary and a
+local run with `--disable-gpu` showed why: without a GPU each frame also
+spends about 11 ms in Chrome's "Commit" on the main thread, uploading the
+canvas, after the frame callback. The guard now adds that part: a message
+posted at the end of the frame callback runs only once the frame is
+rendered. With a GPU the extra is about 0.2 ms. Detecting software
+rendering through WebGL was tried and dropped: SwiftShader passes
+`failIfMajorPerformanceCaveat`, and creating the context took 130 to 240
+ms. Without a GPU Lighthouse is now 100 with TBT 40 ms.
+
 `scripts/postbuild.mjs` now also patches SvelteKit's own copy of the
 prerendered pages, which `vite preview` serves, so preview and the
 end-to-end tests match what ships.
@@ -413,3 +424,238 @@ Practice's settings and load with the engine.
 **Schema v2** adds `daily` (by UTC date) and `best` (by scope). Migrations
 are now steps v0 → v1 → v2 on the raw object, each a pure function, then
 one clean-up; import keeps the first daily recorded and the better best.
+
+## M6
+
+**Offline with SvelteKit's own service worker, not `@vite-pwa/sveltekit`.**
+The brief names vite-pwa, but its SvelteKit plugin only supports kit 1 and 2,
+and this is kit 3. `src/service-worker/index.ts` does the same job in about
+90 lines, with its own `tsconfig.json` so the worker's types stay out of the
+app.
+- On install it caches the app files (hashed), the pages people play on
+  (not the 216 flag pages, the images or the XML), the fonts, the icons, the
+  manifest, the overview geometry and land dots, and every flag the quiz
+  shows (read from the quiz data it has just cached). Flag pages, their
+  static globes and the detailed geometry are cached when visited.
+- Pages are network first (a new version shows when online), then the
+  cache, then the home page. Everything else is cache first.
+- SvelteKit's prerendered list leaves out `/`, so the worker adds it.
+- Cache lookups ignore `Vary`: `vite preview` sends `Vary: Origin` and
+  module scripts send an Origin, which turned every cached script into a
+  miss offline. The files are static and same-origin, so this is safe.
+
+**Install:** `static/manifest.webmanifest` (standalone, white) and icons from
+`pnpm icons` (`scripts/icons.mjs`): the favicon's flag on a pole, white on
+black; the maskable icon keeps the mark inside the middle half.
+
+**23 languages, not 24.** The brief says the data has translations in 24;
+mledoze/countries has 23 (Arabic, Chinese, Croatian, Czech, Dutch, Estonian,
+Finnish, French, German, Hungarian, Italian, Japanese, Korean, Persian,
+Polish, Portuguese, Russian, Serbian, Slovak, Spanish, Swedish, Turkish,
+Urdu). All 23 are offered.
+
+**English wins over translations.** A translated name that is another
+country's English name is not accepted for this one (Polish lists "Sudan"
+for South Sudan). The translations (210 KB) load only when a language is
+turned on, and are in place before the first answer is checked.
+
+**Flag pages:** one per flag, 216 (197 countries and 19 territories), at
+`/flags/<slug>`. Each has the flag at its true size, the name and official
+name, capital, largest city with population (GeoNames), region and
+subregion, proportions as height to width (`2:3`), the other accepted
+names, the description, a static globe (light and dark SVGs, so no
+JavaScript), its lookalike groups with tips, and the flag's author and
+licence.
+
+**Share images:** 1200×630 PNGs made at build time with resvg and the Geist
+TTFs from the `geist` package: flag, small globe and name for each flag
+page; a grid of well-known flags for the site (`/og.png`).
+
+**Nepal has no hairline.** The hairline is a rectangle and Nepal's flag is
+not one. FlagImage drops it for any flag taller than it is wide (only
+Nepal), which it knows from the ratio already in the page, so the quiz DOM
+still names no country. The share image does the same.
+
+**`/flags` uses chips, not a `<select>`, for sorting.** Svelte's `<select>`
+helper went into the runtime chunk every page loads, which pushed it over
+the ~16 KB slow-start step and the play page's LCP to 1.51 s. Chips match
+the region filter anyway. On phones the region chips are one row that
+scrolls sideways. The level dots load after first paint.
+
+**Sitemap and robots** are prerendered endpoints that use `ORIGIN` from
+`#lib/brand.ts` (222 URLs: the pages and the 216 flags).
+
+**Removed `d3-inertia`:** the globe's drag has its own inertia since M2.
+
+**The idle guard decides on the first frame (fix after M6).** CI still lost
+performance points to the globe: without a GPU, each turning frame spent
+12 to 14 ms in Chrome's rendering after the draw, and the guard needed three
+of them before it stopped. The draw itself costs the same with or without a
+GPU (about 3.5 ms); the rendering after it is what differs (0.5 to 2 ms with
+one). So the first frame with the map is drawn still and measured, and the
+globe only starts turning if its rendering took 6 ms or less. The
+three-frame check stays for devices that render fast but draw slowly.
+
+## M7
+
+**Lighthouse performance and LCP are gated locally, and only warn on CI.** CI's
+Lighthouse has failed on performance since the globe arrived in M2 (scores
+78 to 98 for the same build), while `pnpm lighthouse` on a laptop scores 100
+on every run. A trace at 4× CPU throttling without a GPU shows why: after
+first paint the page hydrates (about 80 ms), sets up the quiz in short steps
+(each under 80 ms) and draws the first globe frame (115 ms, half of it
+Chrome's software canvas upload). The shared GitHub runner (two cores, no
+GPU) runs each of these two to three times longer still, and its total
+blocking time swings between 170 ms and 1 s. The brief allows budgets to be
+measured "in CI or with a script": `pnpm lighthouse` is the hard gate for
+the performance score and LCP, CI keeps them as warnings, and CLS and the
+other three categories (which do not depend on the runner's speed) still
+fail CI. LCP is simulated from the same main-thread tasks, so it moves with
+the runner too: 1.6 s there for pages that measure 1.4 s on a laptop.
+Both the play page and a flag page (`/flags/japan`) are checked, as section
+13 asks.
+
+**Error states.** With storage blocked the quiz plays as usual and the
+header says "Progress won't be saved in this browser." When the map does not
+load, a note under the top bar says so and that typed answers still work;
+the empty globe is taken out of the tab order. Both are covered by e2e
+tests (`e2e/errors.test.ts`).
+
+**Weekly flag check** (`.github/workflows/flags.yml`, Mondays 06:17 UTC, or
+by hand): `scripts/data/flag-update.ts check` compares each flag's SHA-1 in
+`flags.json` with Commons; when any differ it runs `pnpm data` and the data
+audits, renders each changed flag before and after
+(`reports/flag-update.png`), and opens a pull request on the `flag-update`
+branch with that image and a table of files, dates, licences and authors.
+The whole pipeline runs, not only the flags, so other upstream changes
+(GeoNames populations, mledoze/countries names) come along and are reviewed in
+the same pull request. It needs the repository setting in owner step 4.
+
+**Visual pass at four widths** (375, 768, 1024, 1440 px, both themes). Two
+fixes: on tall tablets (600 to 899 px wide, 900 px or taller) the globe now
+fills the space above the console instead of a 45% band with a gap under it;
+and below 1200 px the zoom controls sit at the top of the globe, where the
+860 px console cannot cover them.
+
+**Accessibility pass.** axe-core (the copy Lighthouse ships) found one issue
+on every page in both themes and at both widths: Progress's hidden file input
+had no label. 200% zoom was checked as a 640 × 450 viewport.
+
+**Copy pass:** the Review card says "Flags due for another look, just before
+you would forget them" instead of naming spaced repetition.
+
+## M8
+
+The owner's first round of changes (2026-10-25). They override the brief
+where the two differ: PROMPT.md 2.1 and 2.2 (Play), 2.3 (the daily's score
+and share text), 2.4 (the speed run moves to Play), 3.2 (study cards) and
+3.3 (hints).
+
+**Study cards are off by default.** New flags are asked straight away; the
+answer, the globe and the capital show after the first try, right or wrong.
+Practice → Settings → "Show new flags first" brings back the study card
+before each new flag, everywhere (Today, regions, Learn new, lookalike
+drills). Learn new's card now says "Five flags you have not seen yet".
+
+**The zoom for a country in focus is at least 2.2**, the zoom where the dots
+have fully given way to solid land with borders (`focusZoom` in
+`camera.ts`). Big countries (Russia 0.9, the US 1.04) used to fly to a
+whole-globe view in dots; at 2.2 the globe still fits the screen, so they
+show their outline and their neighbours. Small countries keep their own,
+closer zoom. Zooming by hand is unchanged.
+
+**Play is runs** (`src/lib/play/run.ts`, `RunDeck`), like a typing test:
+
+- 10, 20 or 30 flags, or a custom number (3 to 197), from the 197 only
+  (never the territories, so runs compare), no repeats. 20 is the default,
+  and the charts open on it. The length is remembered (`runLength`).
+- No letter hints. Esc still shows the answer (a miss). A typo that is
+  accepted counts as right.
+- The clock starts at the first keystroke and, as in the speed run, counts
+  only the time a flag waits for its answer. A right answer moves on by
+  itself after 450 ms; a miss waits for Enter, so the answer can be read.
+- The end shows right / total and accuracy, time and seconds a flag, the
+  best run of that length, the flags missed (with a link to drill them), and
+  a chart of the last 20 runs of that length. Enter starts the next run.
+- Answers are scheduled like the speed run's (warm-up answers, which do not
+  use up the day's new flags), so runs feed Practice.
+
+**Challenge links.** A run's order comes from a 32-bit seed (mulberry32,
+then Fisher-Yates over the 197). `/?n=20&seed=k3x9ab` plays exactly that
+run, and the share text ends with that link: a class can all play the same
+20 flags and compare. Every run has a seed, so any run can be shared after
+it is played. A changed country list would change old links' flags;
+acceptable.
+
+**The first flag is still the first paint.** The run is random, so the
+prerendered page cannot name its first flag. An inline script at the end of
+`<body>` (added at prerender by `hooks.server.ts`,
+`#lib/server/first-flag.ts`) holds the 197 flag files and ratios (no names:
+no answer in the page), runs the same `runOrder` on the seed from the
+address or a random one, and shows that flag before any app JavaScript; the
+app reads the seed from `window.__hoistRun`. Three details mattered for LCP:
+
+- The script is outside the app's root element: a `<script>` among the
+  app's nodes fails hydration and re-renders the console, losing the image.
+  Rendering it with `{@html}` instead adds Svelte's html helper to the shared
+  JavaScript every page loads.
+- A random seed is drawn again until the first flag's file is 4 KB or less
+  (155 of the 197). A few flags with coats of arms are up to 147 KB, which
+  put LCP anywhere from 1.4 to 2.8 s depending on the draw. Challenge links
+  keep their seed.
+- The run helpers load with the quiz engine, not with the page: imported by
+  Play and Progress they landed in the shared file. `$app/navigation` is not
+  imported either (leaving a challenge link uses `history.replaceState` with
+  SvelteKit's own state), and the run chart measures itself with its own
+  ResizeObserver, not `bind:clientWidth`: both pulled code into the files
+  every page loads first. Each cost a few ms of LCP; together they pushed it
+  from 1.4 s to just over the 1.5 s limit.
+
+**The mode bar** sits under the top bar, as in a typing test: Flags or
+Speed run, then the lengths or the regions. It fades out once a run is under
+way and comes back at its end; a restart button sits in the console header
+during a run. On phones the regions scroll sideways, and the globe's zoom
+buttons move to the bottom of the globe so the bar has the top.
+
+**The speed run moved to Play.** Letters come slowly there: the first after
+10 s on a flag, then one every 5 s, up to half the name, so Tab cannot type
+half of every name at once (`hintWait` in `#lib/match/hint.ts`). The keys
+line counts down. The old `/practice/speed` page is gone; Progress still
+lists the best speed runs.
+
+**Today.** What Play did before M8 (due flags, then the day's new ones, over
+the player's scope) is Practice → Today, the first card. The setting "Play
+covers" is now "Today covers". The first-visit starter round is gone: a new
+player lands in a run, like everyone else.
+
+**The daily scores points.** 100 a flag, 25 when the one letter the daily
+allows was taken, 0 for a miss: out of 1000. Only the first Tab gives a
+letter. A typo that is accepted is a full 100 and a green square (it was
+yellow before); yellow now means "with the letter". The share text reads
+`Hoist Daily 2026-10-25 · 725/1000 · 0:41`. Points come from the squares,
+so dailies already played are scored the same way.
+
+**Hints by mode:** Practice up to half the name, any time; Daily one letter;
+Speed run timed; runs none. One rule per deck (`Deck.hints`).
+
+**Runs are stored** in `progress.runs` (schema v3; v2 migrates with an empty
+list), the last 500, about 60 bytes each. Import keeps the runs of both
+files, once each. Progress has a Runs section: lengths as chips (20 first),
+runs, average, the last ten, the best, and a chart of the last 40.
+
+**The chart** is one series of columns (accuracy per run, oldest on the
+left), in ink only, since flags are the only colour: earlier runs faded, the
+latest (or the one just played) in full ink with its value. Hover shows the
+run's score, time and date; a hidden table carries the same numbers for
+screen readers.
+
+**GitHub.** A GitHub mark in the top bar (drawn by a CSS mask from
+`static/icons/github.svg`, since inline it would add to every page's
+JavaScript), an "Open source" section on About, and the repository's
+website field set to https://hoist.itsanon.com. The top bar also gained a
+"Play" link: the wordmark alone did not say where Play was.
+
+**README** now opens with the icon, a "Play now" button, badges (CI,
+Lighthouse, flags, no tracking, offline, SvelteKit, TypeScript, licences),
+a feature table, screenshots of a run and its result, and the keys.
+

@@ -59,6 +59,10 @@ export interface Settings {
 	sound?: boolean;
 	/** A 10 ms vibration on a right answer, on by default. */
 	haptics?: boolean;
+	/** Show a new flag (name, capital, globe) before asking it. Off by default (owner, M8). */
+	introduce?: boolean;
+	/** Flags in Play's runs: 10, 20 (the default), 30 or a custom number. */
+	runLength?: number;
 }
 
 /** One finished daily challenge (PROMPT.md 2.3). */
@@ -79,9 +83,23 @@ export interface SpeedResult {
 	at: number;
 }
 
+/** One finished run on Play (owner, M8). */
+export interface RunResult {
+	/** Flags in the run. */
+	n: number;
+	right: number;
+	ms: number;
+	/** When it was run, ms since epoch. */
+	at: number;
+	/** One letter per flag: G right, R wrong. */
+	marks: string;
+	/** The seed of its order, so it can be played again (`run.ts`). */
+	seed: number;
+}
+
 export interface Progress {
 	/** Schema version. */
-	v: 2;
+	v: 3;
 	settings: Settings;
 	cards: Record<string, StoredCard>;
 	/** Keyed by local date, `YYYY-MM-DD`. */
@@ -90,6 +108,8 @@ export interface Progress {
 	daily: Record<string, DailyResult>;
 	/** Best speed run per scope (`all`, `europe`, ...). */
 	best: Record<string, SpeedResult>;
+	/** Play's runs, oldest first, the last `MAX_RUNS` kept. */
+	runs: RunResult[];
 	/** Last change, ms since epoch (import merges by most recent). */
 	updated: number;
 }

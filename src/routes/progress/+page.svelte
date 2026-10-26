@@ -9,6 +9,7 @@
 	import type { Engine } from '#lib/play/PlayScreen.svelte';
 	import { FIRST_CHOICE, scopeIds, scopeOf, title } from '#lib/play/scope.ts';
 	import { addDays, clock, localDay } from '#lib/learn/daily.ts';
+	import { DEFAULT_RUN, RUN_LENGTHS } from '#lib/play/lengths.ts';
 	import type { GameCountry } from '#lib/data/types.ts';
 
 	// Same as EXPORT_NAME in transfer.ts, which loads with the engine.
@@ -37,6 +38,24 @@
 	});
 
 	let ids = $derived(ctx ? scopeIds(ctx.data, 'all', ctx.learner.settings.territories) : []);
+
+	/** Play's runs (owner, M8): the chart opens on runs of 20. */
+	let runLength = $state(DEFAULT_RUN);
+	let lengths = $derived.by(() => {
+		void version;
+		const played = new Set(ctx?.learner.progress.runs.map((r) => r.n) ?? []);
+		return [...new Set([...RUN_LENGTHS, ...played])].sort((a, b) => a - b);
+	});
+	let runs = $derived.by(() => {
+		void version;
+		return ctx ? ctx.learner.runs(runLength) : [];
+	});
+	let runStats = $derived.by(() => {
+		if (!ctx || !engine || !runs.length) return null;
+		const accuracy = engine.accuracy;
+		const mean = (rs: typeof runs) => Math.round(rs.reduce((n, r) => n + accuracy(r), 0) / rs.length);
+		return { count: runs.length, mean: mean(runs), recent: mean(runs.slice(-10)), best: ctx.learner.bestRun(runLength)! };
+	});
 
 	let totals = $derived.by(() => {
 		void version;
@@ -219,6 +238,29 @@
 		<p class="muted empty glass">{ctx ? 'No misses yet. Flags you get wrong will show up here.' : ''}</p>
 	{/if}
 
+	<h2>Runs</h2>
+	<div class="runs glass">
+		<div class="chips lengths" role="group" aria-label="Flags per run">
+			{#each lengths as n (n)}
+				<button class="chip num" aria-pressed={runLength === n} onclick={() => (runLength = n)}>{n} flags</button>
+			{/each}
+		</div>
+		{#if runStats && engine}
+			<dl class="run-stats">
+				<div><dt>Runs</dt><dd class="num">{runStats.count}</dd></div>
+				<div><dt>Average</dt><dd class="num">{runStats.mean}%</dd></div>
+				<div><dt>Last 10</dt><dd class="num">{runStats.recent}%</dd></div>
+				<div>
+					<dt>Best</dt>
+					<dd class="num">{runStats.best.right}/{runStats.best.n} · {clock(runStats.best.ms)}</dd>
+				</div>
+			</dl>
+			<engine.RunChart runs={runs.slice(-40)} height={160} caption={runs.length === 1 ? `Accuracy of your run of ${runLength}` : `Accuracy of your last ${Math.min(runs.length, 40)} runs of ${runLength}`} />
+		{:else}
+			<p class="muted">{ctx ? `No runs of ${runLength} yet.` : ''} <a href="/">Play one</a></p>
+		{/if}
+	</div>
+
 	<h2>Best speed runs</h2>
 	{#if bests.length}
 		<ul class="bests glass">
@@ -230,7 +272,7 @@
 			{/each}
 		</ul>
 	{:else}
-		<p class="muted empty glass">{ctx ? 'No speed runs yet.' : ''} <a href="/practice/speed">Try one</a></p>
+		<p class="muted empty glass">{ctx ? 'No speed runs yet.' : ''} <a href="/">Try one</a> (Speed run, on Play)</p>
 	{/if}
 
 	<h2>Your data</h2>
@@ -248,7 +290,7 @@
 				<span class="muted hint">Load a file you exported. It is merged in, keeping the most recent review of each flag.</span>
 			</span>
 			<button class="chip" onclick={() => fileInput?.click()} disabled={!ctx}>Import…</button>
-			<input bind:this={fileInput} class="visually-hidden" type="file" accept="application/json,.json" onchange={upload} tabindex="-1" />
+			<input bind:this={fileInput} class="visually-hidden" type="file" aria-label="Progress file to import" accept="application/json,.json" onchange={upload} tabindex="-1" />
 		</div>
 		<div class="action">
 			<span>
@@ -432,6 +474,42 @@
 	}
 
 	.hardest,
+	.runs {
+		display: grid;
+		gap: 16px;
+		padding: 16px 20px 20px;
+		border-radius: 16px;
+	}
+
+	.lengths .chip[aria-pressed='true'] {
+		background: var(--fg);
+		color: var(--bg);
+		border-color: var(--fg);
+	}
+
+	.run-stats {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 12px;
+	}
+
+	.run-stats dt {
+		font-size: var(--t13);
+		color: var(--muted);
+	}
+
+	.run-stats dd {
+		font-size: var(--t24);
+		font-weight: 600;
+		letter-spacing: -0.02em;
+	}
+
+	@media (max-width: 599px) {
+		.run-stats {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
 	.bests {
 		list-style: none;
 		margin: 0;

@@ -78,21 +78,57 @@ building. Choices the brief does not cover are in [decisions.md](decisions.md).
 - [x] Streak glow (M3), optional sound, vibration (settings)
 - [x] Schema v2 with step migrations
 
-## M6: Pages, offline, languages
-- [ ] `/flags` grid, 197 flag pages with static globes and OG images
-- [ ] `/lookalikes`, `/about` with credits
-- [ ] Offline and install, "Also accept names in", sitemap, robots
+## M6: Pages, offline, languages (done 2026-10-25)
+- [x] `/flags` grid with search, region filter and sort; 216 flag pages (197
+      countries and 19 territories) with static globes and share images
+- [x] `/lookalikes`, `/about` with credits
+- [x] Offline after one visit (service worker), installable (manifest,
+      icons), "Also accept names in" (23 languages), sitemap, robots
+- [x] e2e: the quiz offline after a reload, flag grid search and filters,
+      a flag page, 1200×630 share images, sitemap and robots, a Japanese
+      answer with the setting on
+- [x] Lighthouse 100 / 100 / 100 / 100, LCP 1.4 s; initial JS 47.5 KB
 
-## M7: Polish and launch
-- [ ] Accessibility, performance, copy and visual passes
-- [ ] Error states, 404, weekly flag-update workflow
-- [ ] README with screenshots
+## M7: Polish and launch (done 2026-10-25)
+- [x] Accessibility pass: axe (WCAG 2.1 AA and best practices) clean on every
+      page in both themes at 375 and 1440 px; 200% zoom (640 px) checked
+- [x] Performance pass: Lighthouse 100 / 100 / 100 / 100 on the play page and
+      a flag page (`pnpm lighthouse`), LCP 1.4 s, TBT 10 ms; initial JS 47.5 KB;
+      the globe no longer turns on machines without a GPU
+- [x] Visual pass in both themes at 375, 768, 1024 and 1440 px (tablet globe
+      size, zoom controls clear of the console); copy pass
+- [x] Error states: storage blocked, map failed to load (e2e); 404
+- [x] Weekly flag-update workflow (`.github/workflows/flags.yml`)
+- [x] README with screenshots (`scripts/dev/readme-shots.ts`)
+
+## M8: The owner's first changes (done 2026-10-26)
+What and why in `docs/decisions.md`, M8. They override the brief where the
+two differ.
+- [x] New flags are asked straight away; "Show new flags first" (Practice
+      settings, off by default) brings the study cards back
+- [x] A country in focus is shown at least at the zoom where land is solid
+      with borders (2.2), never as dots
+- [x] Play is runs: 10, 20 (default), 30 or a custom number of random flags,
+      no repeats, no letter hints, the clock from the first keystroke; results
+      with an accuracy chart, the flags missed and a challenge link (same
+      seed, same flags); runs kept (schema v3) and charted on Progress
+- [x] The speed run moved from Practice to Play; letters come after 10 s,
+      then one every 5 s, up to half the name
+- [x] The old Play loop (due flags, then new ones) is Practice → Today
+- [x] Daily: one letter at most, 100 points a flag, 25 with the letter, out
+      of 1000; the share text says points
+- [x] GitHub link in the top bar and on About; the repo's website field
+      points at hoist.itsanon.com; README with badges and a feature table
+- [x] e2e for runs, challenge links, the bar, speed-run letters, daily
+      points and the study-card setting (87 tests)
+- [x] Lighthouse 100 / 100 / 100 / 100 on the play page and a flag page,
+      LCP 1.4 s; initial JS 49.4 KB
 
 ## Owner steps
 
 Things only the owner can do. Everything else is prepared in the repo.
 
-### 1. Connect the repo to Cloudflare (M0)
+### 1. Connect the repo to Cloudflare (M0, done by 2026-10-26)
 
 1. In the Cloudflare dashboard: **Workers & Pages → Create → Import a
    repository**, pick GitHub, and authorise access to `mrghxst/hoist` only.
@@ -104,9 +140,10 @@ Things only the owner can do. Everything else is prepared in the repo.
    - Root directory: `/`
    - Build variables: `NODE_VERSION` = `24`, `PNPM_VERSION` = `10.34.6`
 3. Save and deploy. The first build publishes to `hoist.<account>.workers.dev`.
-   Non-production branches get preview URLs automatically.
+   Other branches (pull requests) are built with `npx wrangler preview`, which
+   needs the `previews` block in `wrangler.jsonc` (added in M8).
 
-### 2. Point the domain at it (M0)
+### 2. Point the domain at it (M0, done by 2026-10-26)
 
 1. Workers & Pages → `hoist` → **Settings → Domains & Routes → Add → Custom
    domain** → `hoist.itsanon.com`. The `itsanon.com` zone must be on the same
@@ -120,3 +157,17 @@ Things only the owner can do. Everything else is prepared in the repo.
    once it has run green once.
 2. GitHub → Settings → Code security: enable Dependabot alerts and security
    updates (version updates come from `.github/dependabot.yml`).
+
+### 4. Let the weekly flag check open pull requests (M7)
+
+1. GitHub → Settings → Actions → General → Workflow permissions: tick
+   **Allow GitHub Actions to create and approve pull requests**. Without it
+   `.github/workflows/flags.yml` finds changes but cannot open the pull
+   request.
+2. Pull requests opened with the workflow's token do not start CI on their
+   own (a GitHub rule). Close and reopen the pull request to run it, or add
+   a fine-grained token for this repository with Contents and Pull requests
+   write access as the Actions secret `FLAG_PR_TOKEN`; the workflow uses it
+   when it is there.
+3. To run it now: Actions → Flag update → Run workflow. On 2026-10-25 the
+   check found one change waiting: Moldova (revised on Commons 2026-10-22).

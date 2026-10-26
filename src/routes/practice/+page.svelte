@@ -7,6 +7,7 @@
 	import { PRACTICE, type PracticeMode } from '#lib/play/practice.ts';
 	import { FIRST_CHOICE, scopeIds, scopeOf, title } from '#lib/play/scope.ts';
 	import { readSettings, writeSettings } from '#lib/store/storage.ts';
+	import { LANGUAGES } from '#lib/play/languages.ts';
 	import type { Settings } from '#lib/learn/types.ts';
 
 	const modes = PRACTICE.filter((m) => m.kind !== 'region' && !m.hidden);
@@ -40,6 +41,11 @@
 		else writeSettings(patch);
 	}
 
+	function toggleLanguage(code: string) {
+		const now = settings.languages ?? [];
+		set({ languages: now.includes(code) ? now.filter((c) => c !== code) : [...now, code] });
+	}
+
 	/** The number on each card. */
 	function count(m: PracticeMode): string {
 		void version;
@@ -57,9 +63,10 @@
 				return `${ids.length - unseen} of ${ids.length}`;
 			case 'lookalikes':
 				return `${ctx.data.lookalikes.length} groups`;
-			case 'speed': {
-				const best = l.progress.best.all;
-				return best ? `Best ${best.right}/${best.total}` : '';
+			case 'today': {
+				const scoped = scopeIds(ctx.data, settings.scope ?? 'all', settings.territories);
+				const n = l.due('flag', scoped).length + Math.min(l.newLeftToday('flag'), l.unseen('flag', scoped).length);
+				return n ? `${n} to do` : 'Done for today';
 			}
 			default:
 				return due ? `${due} due` : unseen ? `${unseen} to learn` : 'All learned';
@@ -75,7 +82,7 @@
 <section class="page">
 	<header class="intro">
 		<h1>Practice</h1>
-		<p class="muted">Pick what to drill. Play on the home page mixes review and new flags for you.</p>
+		<p class="muted">Spaced repetition: each flag comes back just before you would forget it. For quick runs, go to Play.</p>
 	</header>
 
 	<ul class="grid modes" aria-label="Modes">
@@ -107,7 +114,7 @@
 	<h2>Settings</h2>
 	<div class="settings glass">
 		<div class="setting">
-			<span class="label" id="covers">Play covers</span>
+			<span class="label" id="covers">Today covers</span>
 			<div class="chips" role="group" aria-labelledby="covers">
 				{#each FIRST_CHOICE as id (id)}
 					<button class="chip" aria-pressed={(settings.scope ?? 'all') === id} onclick={() => set({ scope: id })}
@@ -126,11 +133,31 @@
 		</div>
 		<label class="setting toggle">
 			<span>
+				<span class="label">Show new flags first</span>
+				<span class="muted hint">Before a new flag is asked, show its name, capital and place on the globe. Off: new flags are asked straight away.</span>
+			</span>
+			<input type="checkbox" checked={settings.introduce ?? false} onchange={(e) => set({ introduce: e.currentTarget.checked })} />
+		</label>
+		<label class="setting toggle">
+			<span>
 				<span class="label">Territories</span>
 				<span class="muted hint">Also practise Greenland, Hong Kong, Puerto Rico and other places with their own flags.</span>
 			</span>
 			<input type="checkbox" checked={settings.territories ?? false} onchange={(e) => set({ territories: e.currentTarget.checked })} />
 		</label>
+		<div class="setting">
+			<span>
+				<span class="label" id="languages">Also accept names in</span>
+				<span class="muted hint">English always counts. Add languages you know the country names in.</span>
+			</span>
+			<div class="chips languages" role="group" aria-labelledby="languages">
+				{#each LANGUAGES as lang (lang.code)}
+					<button class="chip" aria-pressed={settings.languages?.includes(lang.code) ?? false} onclick={() => toggleLanguage(lang.code)}
+						>{lang.name}</button
+					>
+				{/each}
+			</div>
+		</div>
 		<label class="setting toggle">
 			<span>
 				<span class="label">Sound</span>
@@ -277,6 +304,16 @@
 		background: var(--fg);
 		color: var(--bg);
 		border-color: var(--fg);
+	}
+
+	.languages {
+		gap: 6px;
+	}
+
+	.languages .chip {
+		min-height: 30px;
+		padding: 0 12px;
+		font-size: var(--t13);
 	}
 
 	.toggle {

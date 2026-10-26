@@ -19,13 +19,23 @@
 	import FlagImage from '#lib/ui/FlagImage.svelte';
 	import { afterFirstPaint } from '#lib/ui/after-paint.ts';
 	import type ShortcutsDialog from '#lib/ui/Shortcuts.svelte';
-	import { loadGame } from './load.ts';
+	import { loadGame, loadTranslations } from './load.ts';
 	import { clock } from '#lib/learn/daily.ts';
 	import type { GameCountry } from '#lib/data/types.ts';
 
 	interface Props {
-		/** The first flag, prerendered (Play): shown before the engine loads. */
+		/** The first flag, prerendered: shown before the engine loads. */
 		first?: { flag: string; ratio: number } | null;
+		/**
+		 * Or an empty image that an inline script fills in before any
+		 * JavaScript loads (Play's random first flag, `#lib/server/first-flag.ts`).
+		 * Its attributes are static, so hydration leaves what the script set.
+		 */
+		randomFirst?: boolean;
+		/** The game, for the page to read (Play hides its bar during a run). */
+		game?: Game | null;
+		/** Extra controls at the end of the header (Play's restart). */
+		tools?: Snippet<[Finish]>;
 		/** Header and placeholder until the deck exists. */
 		label?: string;
 		placeholder?: string;
@@ -39,14 +49,26 @@
 		done?: Snippet<[Finish]>;
 	}
 
-	let { first = null, label = '', placeholder = 'Type the country', picks = false, begin, finish, done }: Props = $props();
+	let {
+		first = null,
+		randomFirst = false,
+		game = $bindable(null),
+		tools,
+		label = '',
+		placeholder = 'Type the country',
+		picks = false,
+		begin,
+		finish,
+		done
+	}: Props = $props();
 
-	let game = $state<Game | null>(null);
 	let ctx = $state<PlayContext | null>(null);
 	// The quiz engine and the keys dialog load after first paint (PROMPT.md 10).
 	let engine = $state.raw<Engine>();
 	let Shortcuts = $state<typeof ShortcutsDialog>();
 	let loadError = $state(false);
+	// The map is a bonus: without it the typed answers still work (M7).
+	let mapError = $state(false);
 	let pendingSubmit = false;
 	let hydrated = $state(false);
 	let showHelp = $state(false);
@@ -113,6 +135,23 @@
 		return () => clearInterval(t);
 	});
 
+	/** Points so far, for rounds that score them (the daily). */
+	let score = $derived.by(() => {
+		void phase;
+		return game?.deck.score?.() ?? null;
+	});
+
+	/** What Tab does now: the deck's rule decides (Practice, Daily, Speed run, runs). */
+	let hintKey = $derived.by(() => {
+		void now;
+		void phase;
+		void game?.hints;
+		const wait = game?.hintWait(performance.now()) ?? null;
+		if (wait === null) return '';
+		if (wait > 0) return `a letter in ${Math.ceil(wait / 1000)} s`;
+		return game?.hintRule === 'one' ? 'a letter (25 points)' : 'a letter';
+	});
+
 	let fieldPlaceholder = $derived(
 		!game ? placeholder : ask === 'capital' ? 'Type the capital' : 'Type the country'
 	);
@@ -138,6 +177,12 @@
 				const g = new m.Game(d, begin(c, m));
 				await yieldTask();
 				g.start();
+				// "Also accept names in …" (5.2): the translations load only when
+				// asked for, and before the first answer is checked. Without them
+				// (offline before they were cached) English still works.
+				const codes = c.learner.settings.languages ?? [];
+				const translations = codes.length ? await loadTranslations().catch(() => null) : null;
+				if (translations) g.setExtraNames(m.extraNames(translations, codes, d.countries));
 				// Keep anything typed while the data was loading.
 				if (input?.value && g.phase === 'ask') g.input = input.value;
 				ctx = c;
@@ -166,8 +211,11 @@
 		};
 	});
 
-	function restart(deck: Deck) {
+	/** Play another deck in the same screen (Play's bar calls it too). */
+	export function restart(deck: Deck) {
 		if (!game) return;
+		clearTimeout(autoNext);
+		autoNext = 0;
 		game.start(deck);
 		focusInput();
 	}
@@ -202,6 +250,7 @@
 		// Enter before the quiz data arrived: check once it has.
 		if (!game) return void (pendingSubmit = true);
 		if (game.phase === 'done' || game.phase === 'study') return next();
+		game.touch();
 		const before = game.wrongCount;
 		game.submit();
 		if (game.wrongCount !== before) {
@@ -298,6 +347,7 @@
 			{markers}
 			offsetY={wide ? -90 : 0}
 			view={{ lon: 15, lat: 25, zoom: wide ? 1.35 : 1.2 }}
+			onerror={() => (mapError = true)}
 		/>
 	</div>
 
@@ -313,7 +363,14 @@
 					<span class="sep" aria-hidden="true">·</span>
 					<span class="num" aria-label="Time">{time}</span>
 				{/if}
+				{#if score !== null}
+					<span class="sep" aria-hidden="true">·</span>
+					<span class="num">{score} points</span>
+				{/if}
 			</span>
+			{#if tools && game && ctx && engine}
+				<span class="tools">{@render tools({ game, ctx, engine, restart })}</span>
+			{/if}
 			{#if !persistent}
 				<span class="quiet">Progress won't be saved in this browser.</span>
 			{:else if game && game.streak > 1}
@@ -359,6 +416,8 @@
 					/>
 				{:else if first}
 					<FlagImage src={first.flag} ratio={first.ratio} alt="Flag to name" eager />
+				{:else if randomFirst}
+					<img id="first-flag" class="first-flag" alt="Flag to name" width="288" height="192" fetchpriority="high" draggable="false" />
 				{/if}
 			</figure>
 
@@ -387,7 +446,9 @@
 								id="answer"
 								bind:this={input}
 								oninput={(e) => {
-									if (game) game.input = e.currentTarget.value;
+									if (!game) return;
+									game.input = e.currentTarget.value;
+									game.touch();
 								}}
 								readonly={phase === 'done' || phase === 'study'}
 								autocomplete="off"
@@ -423,7 +484,7 @@
 						<engine.Reveal {current} outcome={studying ? null : outcome} always={!typing} {tip} onnext={next} bind:button={nextButton} />
 					{:else if phase === 'ask' && typing}
 						<p class="keys" id="keys">
-							<kbd>⏎</kbd> check<span class="sep" aria-hidden="true">·</span><kbd>Tab</kbd> a letter<span
+							<kbd>⏎</kbd> check{#if hintKey}<span class="sep" aria-hidden="true">·</span><kbd>Tab</kbd> {hintKey}{/if}<span
 								class="sep"
 								aria-hidden="true">·</span
 							><kbd>Esc</kbd> show me<span class="sep" aria-hidden="true">·</span><kbd>?</kbd> keys
@@ -441,6 +502,8 @@
 
 	{#if loadError}
 		<p class="error glass" role="alert">The flags did not load. Check the connection and reload the page.</p>
+	{:else if mapError}
+		<p class="error glass" role="status">The map did not load. You can still play: type the country as usual.</p>
 	{/if}
 
 	<div class="visually-hidden" aria-live="polite">{announce}</div>
@@ -488,6 +551,27 @@
 
 	.quiet {
 		text-align: right;
+	}
+
+	.tools {
+		margin-left: auto;
+		display: inline-flex;
+		gap: 8px;
+	}
+
+	/* Play's first flag, written by its inline script (same box as FlagImage). */
+	.first-flag {
+		display: block;
+		width: min(var(--flag-w, 320px), calc(var(--flag-h, 200px) * var(--r)));
+		max-width: 100%;
+		height: auto;
+		border-radius: 2px;
+		outline: 1px solid var(--overlay);
+		user-select: none;
+	}
+
+	.first-flag:not([src]) {
+		visibility: hidden;
 	}
 
 	.streak {
@@ -725,6 +809,14 @@
 	}
 
 	/* With the keyboard open there is little room: shrink the flag. */
+	/* Tall tablets: the globe takes all the room above the console, not a
+	   45% band with a gap under it. */
+	@media (min-width: 600px) and (max-width: 899px) and (min-height: 900px) {
+		.stage {
+			height: calc(100dvh - var(--bar-h) - 290px);
+		}
+	}
+
 	@media (max-width: 899px) and (max-height: 620px) {
 		.flag-card {
 			--flag-h: 76px;

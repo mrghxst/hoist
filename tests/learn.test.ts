@@ -72,15 +72,15 @@ describe('schema and migrations', () => {
 		const m = migrate({ settings: { theme: 'dark', scope: 'europe', bogus: 1 } }, T0);
 		expect(m).toMatchObject({ ok: true, from: 0 });
 		expect(m.progress.settings).toEqual({ theme: 'dark', scope: 'europe' });
-		expect(m.progress.v).toBe(2);
+		expect(m.progress.v).toBe(3);
 	});
 
-	it('migrates v1 (M4) to v2 and keeps cards and days', () => {
+	it('migrates v1 (M4) to v3 and keeps cards and days', () => {
 		const card = review(undefined, GOOD, T0);
 		const v1 = { v: 1, settings: { newPerDay: 20 }, cards: { 'flag:JP': card }, days: { '2026-01-05': { n: 1, right: 1, fresh: { flag: 1 } } }, updated: T0 };
 		const m = migrate(v1);
 		expect(m).toMatchObject({ ok: true, from: 1 });
-		expect(m.progress).toEqual({ ...v1, v: 2, daily: {}, best: {} });
+		expect(m.progress).toEqual({ ...v1, v: 3, daily: {}, best: {}, runs: [] });
 	});
 
 	it('each step is pure and moves one version up', () => {
@@ -90,6 +90,7 @@ describe('schema and migrations', () => {
 		expect(raw).toEqual(copy);
 		expect(v1.v).toBe(1);
 		expect(STEPS[1]!(v1).v).toBe(2);
+		expect(STEPS[2]!(STEPS[1]!(v1)).v).toBe(3);
 	});
 
 	it('keeps valid daily results and bests, drops broken ones', () => {
@@ -165,9 +166,16 @@ describe('session queue (PROMPT.md 3.2)', () => {
 		expect(shown.slice(MAX_DUE).map((i) => i.id)).toContain('N1');
 	});
 
-	it('introduces new cards as study cards, then quizzes the batch mixed', () => {
+	it('quizzes new cards straight away, the batch mixed (no study cards by default)', () => {
 		const batch = ['A', 'B', 'C', 'D', 'E'];
-		const q = new SessionQueue({ due: [], fresh: [batch], random: seeded(7) });
+		const shown = drain(new SessionQueue({ due: [], fresh: [batch], random: seeded(7) }));
+		expect(shown.every((i) => !i.study)).toBe(true);
+		expect(shown.map((i) => i.id).sort()).toEqual(batch);
+	});
+
+	it('with study on, introduces new cards as study cards, then quizzes the batch mixed', () => {
+		const batch = ['A', 'B', 'C', 'D', 'E'];
+		const q = new SessionQueue({ due: [], fresh: [batch], study: true, random: seeded(7) });
 		const shown = drain(q);
 		expect(shown.slice(0, 5)).toEqual(batch.map((id) => ({ id, study: true })));
 		const quizzed = shown.slice(5).map((i) => i.id);
@@ -230,7 +238,7 @@ describe('session queue (PROMPT.md 3.2)', () => {
 	it('never quizzes a flag before its study card', () => {
 		for (let seed = 1; seed <= 50; seed++) {
 			const sim = (): Similarity => ({ region: 'x', colours: ['a', 'b'], groups: ['g'] });
-			const q = new SessionQueue({ due: [], fresh: [['A', 'B', 'C', 'D', 'E']], similarity: sim, random: seeded(seed) });
+			const q = new SessionQueue({ due: [], fresh: [['A', 'B', 'C', 'D', 'E']], study: true, similarity: sim, random: seeded(seed) });
 			const shown = drain(q);
 			const seen = new Set<string>();
 			for (const item of shown) {
@@ -241,7 +249,7 @@ describe('session queue (PROMPT.md 3.2)', () => {
 	});
 
 	it('counts questions, not study cards, in its progress', () => {
-		const q = new SessionQueue({ due: ['A'], fresh: [['B', 'C']], random: seeded(3) });
+		const q = new SessionQueue({ due: ['A'], fresh: [['B', 'C']], study: true, random: seeded(3) });
 		expect(q.progress()).toEqual({ done: 0, total: 3 });
 		const a = q.next()!;
 		q.record(a.id, GOOD);
@@ -411,7 +419,7 @@ describe('export and import', () => {
 	it('rejects files that are not Hoist progress', () => {
 		expect(parseImport('{nope').ok).toBe(false);
 		expect(parseImport('{"app":"other"}').ok).toBe(false);
-		expect(parseImport(JSON.stringify({ app: 'hoist', kind: 'progress', progress: { v: 3 } })).ok).toBe(false);
+		expect(parseImport(JSON.stringify({ app: 'hoist', kind: 'progress', progress: { v: 4 } })).ok).toBe(false);
 	});
 });
 
@@ -474,7 +482,7 @@ describe('lookalike drills (PROMPT.md 7.3)', () => {
 	it('drills the groups of the flags asked for, members back to back', () => {
 		const l = learner();
 		for (const id of ['TD', 'RO']) l.answer('flag', id, GOOD, T0);
-		const plan = new Planner(data, l).lookalikes({ focus: ['TD'], random: seeded(5) });
+		const plan = new Planner(data, l).lookalikes({ focus: ['TD'], random: seeded(5), study: true });
 		const shown = drain(plan.queue);
 		const members = new Set(groupsOfId('TD').flatMap((g) => g.members));
 		expect(new Set(shown.map((i) => i.id))).toEqual(members);
@@ -483,6 +491,13 @@ describe('lookalike drills (PROMPT.md 7.3)', () => {
 			const first = shown.find((i) => i.id === id)!;
 			expect(first.study).toBe(!['TD', 'RO'].includes(id));
 		}
+	});
+
+	it('shows no study cards unless the player turned them on', () => {
+		const l = learner();
+		expect(drain(new Planner(data, l).lookalikes({ focus: ['TD'] }).queue).some((i) => i.study)).toBe(false);
+		l.setSettings({ introduce: true });
+		expect(drain(new Planner(data, l).lookalikes({ focus: ['TD'] }).queue).some((i) => i.study)).toBe(true);
 	});
 
 	it('without a focus picks a few groups, each kept together', () => {
@@ -543,5 +558,40 @@ describe('daily results, streaks and speed runs', () => {
 		expect(m.daily['2026-10-25']!.right).toBe(5);
 		expect(m.daily['2026-10-24']!.right).toBe(7);
 		expect(m.best.all!.right).toBe(120);
+	});
+});
+
+describe("Play's runs (owner, M8)", () => {
+	const run = (n: number, right: number, ms: number, at: number, seed = 1) => ({
+		n,
+		right,
+		ms,
+		at,
+		seed,
+		marks: 'G'.repeat(right) + 'R'.repeat(n - right)
+	});
+
+	it('keeps runs per length and knows the best (more right, then faster)', () => {
+		const l = learner();
+		expect(l.saveRun(run(20, 15, 90_000, T0)).best).toBe(true);
+		expect(l.saveRun(run(20, 14, 10_000, T0 + 1)).best).toBe(false);
+		expect(l.saveRun(run(20, 15, 80_000, T0 + 2))).toMatchObject({ best: true, previous: { ms: 90_000 } });
+		expect(l.saveRun(run(10, 3, 1, T0 + 3)).best).toBe(true);
+		expect(l.runs(20)).toHaveLength(3);
+		expect(l.bestRun(20)!.ms).toBe(80_000);
+	});
+
+	it('validates stored runs and drops broken ones', () => {
+		const m = migrate({ v: 3, runs: [run(10, 8, 5, T0), { ...run(10, 8, 5, T0), marks: 'GG' }, { n: 'x' }, run(20, 20, 9, T0 - 5)] });
+		expect(m.progress.runs.map((r) => r.n)).toEqual([20, 10]);
+	});
+
+	it('an import keeps the runs of both, once each', () => {
+		const a = learner();
+		const b = learner();
+		a.saveRun(run(20, 10, 1, T0, 7));
+		b.saveRun(run(20, 10, 1, T0, 7));
+		b.saveRun(run(20, 12, 1, T0 + 9, 8));
+		expect(merge(a.progress, b.progress).runs.map((r) => r.seed)).toEqual([7, 8]);
 	});
 });

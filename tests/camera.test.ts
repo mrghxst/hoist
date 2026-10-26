@@ -4,7 +4,7 @@ import { feature } from 'topojson-client';
 import { readFileSync } from 'node:fs';
 import type { FeatureCollection } from 'geojson';
 import type { GeometryCollection, Topology } from 'topojson-specification';
-import { clampZoom, cubicInOut, flightDuration, flightPath, wrap } from '../src/lib/globe/camera.ts';
+import { clampZoom, cubicInOut, flightDuration, flightPath, focusZoom, SOLID_ZOOM, wrap } from '../src/lib/globe/camera.ts';
 import { decodeDots } from '../src/lib/globe/data.ts';
 import countries from '../src/lib/data/countries.json' with { type: 'json' };
 import type { Country } from '../src/lib/data/types.ts';
@@ -43,6 +43,13 @@ describe('camera', () => {
 		expect(wrap(190)).toBe(-170);
 		expect(wrap(-190)).toBe(170);
 		expect(wrap(180)).toBe(180);
+	});
+
+	it('a country in focus is never shown as dots: at least the solid-land zoom', () => {
+		expect(focusZoom(0.9)).toBe(SOLID_ZOOM); // Russia
+		expect(focusZoom(1.99)).toBe(SOLID_ZOOM); // DR Congo
+		expect(focusZoom(3.5)).toBe(3.5);
+		expect(focusZoom(9)).toBe(4);
 	});
 });
 

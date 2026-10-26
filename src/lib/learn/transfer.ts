@@ -2,7 +2,7 @@
  * Export and import of progress as `hoist-progress.json` (PROMPT.md 3.4).
  * Import validates the file and merges by most recent review.
  */
-import { migrate } from './schema.ts';
+import { cleanRuns, migrate } from './schema.ts';
 import type { DayLog, Progress, SpeedResult } from './types.ts';
 
 export const EXPORT_NAME = 'hoist-progress.json';
@@ -45,8 +45,9 @@ export function parseImport(text: string): Parsed {
 /**
  * Merges an imported file into the current progress: for each card the more
  * recent review wins; days keep the larger counts; a daily played in both
- * keeps the one here; the better speed run wins; settings already set here
- * stay, missing ones come from the file.
+ * keeps the one here; the better speed run wins; runs from both are kept
+ * (once each); settings already set here stay, missing ones come from the
+ * file.
  */
 export function merge(current: Progress, incoming: Progress): Progress {
 	const cards = { ...current.cards };
@@ -72,13 +73,16 @@ export function merge(current: Progress, incoming: Progress): Progress {
 		const mine = best[k];
 		if (!mine || better(b, mine)) best[k] = b;
 	}
+	const seen = new Set(current.runs.map((r) => `${r.at}:${r.seed}`));
+	const runs = cleanRuns([...current.runs, ...incoming.runs.filter((r) => !seen.has(`${r.at}:${r.seed}`))]);
 	return {
-		v: 2,
+		v: 3,
 		settings: { ...incoming.settings, ...current.settings },
 		cards,
 		days,
 		daily,
 		best,
+		runs,
 		updated: Math.max(current.updated, incoming.updated)
 	};
 }

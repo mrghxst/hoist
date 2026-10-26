@@ -4,7 +4,7 @@
 	import PlayScreen, { type Engine } from '#lib/play/PlayScreen.svelte';
 	import type { PlayContext } from '#lib/play/engine.ts';
 	import type { Deck } from '#lib/play/game.svelte.ts';
-	import { clock, DAILY_SIZE, shareText } from '#lib/learn/daily.ts';
+	import { clock, MAX_POINTS, pointsOf, shareText } from '#lib/learn/daily.ts';
 	import type { DailyResult } from '#lib/learn/types.ts';
 
 	let date = $state('');
@@ -55,12 +55,12 @@
 		}
 	}
 
-	const label = (m: string) => (m === 'G' ? 'right' : m === 'Y' ? 'right with help' : 'wrong');
+	const label = (m: string) => (m === 'G' ? 'right, 100 points' : m === 'Y' ? 'right with a letter, 25 points' : 'wrong, 0 points');
 </script>
 
 <svelte:head>
 	<title>Daily · {BRAND}</title>
-	<meta name="description" content="The same ten flags for everyone today. One try, then share your score." />
+	<meta name="description" content="The same ten flags for everyone today. 100 points a flag, one try, then share your score." />
 </svelte:head>
 
 <h1 class="visually-hidden">Daily challenge</h1>
@@ -69,19 +69,19 @@
 	{#snippet done({ ctx })}
 		{@const r = ctx.learner.progress.daily[date]}
 		{#if r}
-			<p class="done-mark" aria-hidden="true">{r.right}/{DAILY_SIZE}</p>
+			<p class="done-mark" aria-hidden="true">{pointsOf(r.marks)}</p>
 		{/if}
 	{/snippet}
 	{#snippet finish({ ctx })}
 		{@const r = ctx.learner.progress.daily[date]}
 		{@const streak = ctx.learner.dailyStreak()}
 		{#if r}
-			<h2>{r.right} of {DAILY_SIZE} · <span class="num">{clock(r.ms)}</span></h2>
+			<h2><span class="num">{pointsOf(r.marks)}</span> of {MAX_POINTS} points · <span class="num">{clock(r.ms)}</span></h2>
 			<p class="squares" aria-label={[...r.marks].map((m, i) => `${i + 1} ${label(m)}`).join(', ')}>
 				{#each [...r.marks] as m, i (i)}<span class="sq {m}"></span>{/each}
 			</p>
 			<p class="muted small">
-				Daily {date}.
+				Daily {date}. {r.right} of {r.marks.length} right.
 				{#if streak > 1}{streak} days in a row.{/if}
 				Next daily in {untilNext(now)}.
 			</p>
