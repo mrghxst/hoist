@@ -128,7 +128,7 @@ two differ.
 
 Things only the owner can do. Everything else is prepared in the repo.
 
-### 1. Connect the repo to Cloudflare (M0)
+### 1. Connect the repo to Cloudflare (M0, done by 2026-10-26)
 
 1. In the Cloudflare dashboard: **Workers & Pages → Create → Import a
    repository**, pick GitHub, and authorise access to `mrghxst/hoist` only.
@@ -140,9 +140,10 @@ Things only the owner can do. Everything else is prepared in the repo.
    - Root directory: `/`
    - Build variables: `NODE_VERSION` = `24`, `PNPM_VERSION` = `10.34.6`
 3. Save and deploy. The first build publishes to `hoist.<account>.workers.dev`.
-   Non-production branches get preview URLs automatically.
+   Other branches (pull requests) are built with `npx wrangler preview`, which
+   needs the `previews` block in `wrangler.jsonc` (added in M8).
 
-### 2. Point the domain at it (M0)
+### 2. Point the domain at it (M0, done by 2026-10-26)
 
 1. Workers & Pages → `hoist` → **Settings → Domains & Routes → Add → Custom
    domain** → `hoist.itsanon.com`. The `itsanon.com` zone must be on the same
