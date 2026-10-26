@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { BRAND, ORIGIN } from '#lib/brand.ts';
+	import { BRAND, ORIGIN, REPO } from '#lib/brand.ts';
 
 	let { data } = $props();
 
 	const KEYS: [string, string][] = [
 		['Enter', 'Check the answer, then go to the next flag'],
-		['Tab', 'Reveal the next letter (counts as a hint)'],
+		['Tab', 'Reveal the next letter: in Practice up to half the name, one in the Daily, slowly in a speed run, none in a run'],
 		['Esc', 'Give up and see the answer'],
 		['1 – 4', 'Pick a choice ("Which one?", easy mode)'],
 		['← → ↑ ↓', 'Turn the globe when it has focus'],
@@ -76,11 +76,21 @@
 	</section>
 
 	<section class="card glass">
+		<h2>Ways to play</h2>
+		<p>
+			<strong>Play</strong> is quick runs: 10, 20, 30 or any number of random flags, no letter hints, against the clock. Every run
+			has its own link, so a friend or a whole class can play the same flags and compare. A speed run goes through all 197, or one
+			region. <strong>Daily</strong> is the same ten flags for everyone each day, 100 points a flag. <strong>Practice</strong> is
+			for learning them all, with spaced repetition.
+		</p>
+	</section>
+
+	<section class="card glass">
 		<h2>How it helps you remember</h2>
 		<p>
 			Typing the name makes you recall it, which sticks far better than recognising it among choices. Flags come back just before
-			you would forget them, with longer gaps each time you know them (spaced repetition, using FSRS). New flags come five at a time,
-			shown first, then asked straight away. Flags that are easy to mix up are practised side by side so you learn the difference.
+			you would forget them, with longer gaps each time you know them (spaced repetition, using FSRS). New flags come five at a time
+			and are asked straight away (Practice can show them first). Flags that are easy to mix up are practised side by side so you learn the difference.
 			When you miss one, you see the right answer, and what you named instead, at once.
 		</p>
 	</section>
@@ -134,6 +144,14 @@
 			{/each}
 		</ul>
 		<p class="muted small">No tracking, no cookies, no ads. The site makes no requests to other services.</p>
+	</section>
+
+	<section class="card glass">
+		<h2>Open source</h2>
+		<p>
+			{BRAND} is open source under the MIT licence. The code, the data pipeline and every decision behind them are on
+			<a href={REPO} rel="noopener">GitHub</a>. Found a wrong flag or a missing name? Open an issue there.
+		</p>
 	</section>
 </article>
 

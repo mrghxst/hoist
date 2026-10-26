@@ -6,7 +6,7 @@
 import { geoOrthographic, type GeoProjection } from 'd3-geo';
 import type { Feature, MultiLineString, MultiPolygon, Polygon } from 'geojson';
 import versor from 'versor';
-import { clampZoom, flightDuration, flightPath, smoothstep, wrap, ZOOM_MAX, ZOOM_MIN, type Camera } from './camera.ts';
+import { clampZoom, flightDuration, flightPath, focusZoom, smoothstep, SOLID_FROM, SOLID_ZOOM, wrap, ZOOM_MAX, ZOOM_MIN, type Camera } from './camera.ts';
 import type { GlobeData } from './data.ts';
 import { readPalette, type Palette } from './palette.ts';
 import { frameOf, graticuleShape, project, shapeOf, trace, type Frame, type Shape } from './sphere.ts';
@@ -181,7 +181,7 @@ export class Globe {
 		this.target = target;
 		this.autoRotate = false;
 		this.inertia = null;
-		const to: Camera = { lon: target.centre[0], lat: target.centre[1], roll: 0, zoom: clampZoom(target.zoom) };
+		const to: Camera = { lon: target.centre[0], lat: target.centre[1], roll: 0, zoom: focusZoom(target.zoom) };
 		this.flight?.resolve();
 		this.flight = null;
 		if (reducedMotion()) return this.jump(to);
@@ -428,7 +428,7 @@ export class Globe {
 		const cx = this.cx;
 		const cy = this.cy;
 		const z = this.cam.zoom;
-		const solid = smoothstep(1.6, 2.2, z); // dots → solid land
+		const solid = smoothstep(SOLID_FROM, SOLID_ZOOM, z); // dots → solid land
 		const farSide = 1 - smoothstep(1.3, 2, z); // far side fades by zoom 2
 		const data = this.data;
 		const countries = data?.countries;

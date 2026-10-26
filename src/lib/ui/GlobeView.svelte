@@ -243,6 +243,15 @@
 		}
 	}
 
+	/* Phones: Play's mode bar has the top; the globe is a band above the
+	   console there, so its bottom corner is free again. */
+	@media (max-width: 699px) {
+		.controls {
+			top: auto;
+			bottom: 12px;
+		}
+	}
+
 	/* From 900 px the play page's globe runs under the top bar. */
 	@media (min-width: 900px) and (max-width: 1199px) {
 		.controls {

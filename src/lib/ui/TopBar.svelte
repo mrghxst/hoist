@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { BRAND } from '#lib/brand.ts';
+	import { BRAND, REPO } from '#lib/brand.ts';
 	import ThemeToggle from './ThemeToggle.svelte';
 
 	const links = [
+		{ href: '/', label: 'Play' },
 		{ href: '/daily', label: 'Daily' },
 		{ href: '/practice', label: 'Practice' },
 		{ href: '/progress', label: 'Progress' },
@@ -14,7 +15,7 @@
 
 	function isActive(href: string) {
 		const p = page.url.pathname;
-		return p === href || p.startsWith(href + '/');
+		return p === href || (href !== '/' && p.startsWith(href + '/'));
 	}
 
 	$effect(() => {
@@ -41,6 +42,8 @@
 		</nav>
 
 		<div class="end">
+			<!-- The mark is a CSS mask: as markup it would weigh on every page's JavaScript. -->
+			<a class="repo" href={REPO} rel="noopener" aria-label="Source code on GitHub" title="Source code on GitHub"><span class="mark-gh"></span></a>
 			<ThemeToggle />
 			<button
 				class="menu-btn"
@@ -157,6 +160,28 @@
 		display: flex;
 		align-items: center;
 		gap: 2px;
+	}
+
+	.repo {
+		width: 36px;
+		height: 36px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		color: var(--muted);
+		border-radius: 999px;
+		transition: color 150ms var(--ease);
+	}
+
+	.repo:hover {
+		color: var(--fg);
+	}
+
+	.mark-gh {
+		width: 17px;
+		height: 17px;
+		background: currentColor;
+		mask: url('/icons/github.svg') center / contain no-repeat;
 	}
 
 	.menu-btn {

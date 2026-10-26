@@ -101,6 +101,29 @@ building. Choices the brief does not cover are in [decisions.md](decisions.md).
 - [x] Weekly flag-update workflow (`.github/workflows/flags.yml`)
 - [x] README with screenshots (`scripts/dev/readme-shots.ts`)
 
+## M8: The owner's first changes (done 2026-10-26)
+What and why in `docs/decisions.md`, M8. They override the brief where the
+two differ.
+- [x] New flags are asked straight away; "Show new flags first" (Practice
+      settings, off by default) brings the study cards back
+- [x] A country in focus is shown at least at the zoom where land is solid
+      with borders (2.2), never as dots
+- [x] Play is runs: 10, 20 (default), 30 or a custom number of random flags,
+      no repeats, no letter hints, the clock from the first keystroke; results
+      with an accuracy chart, the flags missed and a challenge link (same
+      seed, same flags); runs kept (schema v3) and charted on Progress
+- [x] The speed run moved from Practice to Play; letters come after 10 s,
+      then one every 5 s, up to half the name
+- [x] The old Play loop (due flags, then new ones) is Practice → Today
+- [x] Daily: one letter at most, 100 points a flag, 25 with the letter, out
+      of 1000; the share text says points
+- [x] GitHub link in the top bar and on About; the repo's website field
+      points at hoist.itsanon.com; README with badges and a feature table
+- [x] e2e for runs, challenge links, the bar, speed-run letters, daily
+      points and the study-card setting (87 tests)
+- [x] Lighthouse 100 / 100 / 100 / 100 on the play page and a flag page,
+      LCP 1.4 s; initial JS 49.4 KB
+
 ## Owner steps
 
 Things only the owner can do. Everything else is prepared in the repo.

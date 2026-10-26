@@ -2,8 +2,9 @@
  * The order of one practice session (PROMPT.md 3.2 and 7.2):
  *
  * 1. Due cards first, most overdue first, at most 50.
- * 2. Then new cards, five at a time: a study card for each (name, flight,
- *    capital), then the five quizzed in mixed order.
+ * 2. Then new cards, five at a time, quizzed in mixed order. With `study`
+ *    (the "Show new flags first" setting) each batch opens with a study
+ *    card for each flag (name, flight, capital).
  * 3. Never the same flag twice in a row, and near-identical flags (same
  *    lookalike group, or same region and colours) rarely back to back,
  *    unless the session asks for that (the lookalike drill).
@@ -39,6 +40,8 @@ export interface QueueOptions {
 	/** An exact order instead of due-then-new (the lookalike drill). */
 	sequence?: Item[];
 	similarity?: (id: string) => Similarity | undefined;
+	/** A study card before each new flag's first question. */
+	study?: boolean;
 	/** Keep near-identical flags apart (default) or not (lookalike drill). */
 	interleave?: boolean;
 	random?: () => number;
@@ -63,7 +66,7 @@ export class SessionQueue {
 		}
 		for (const id of o.due.slice(0, o.maxDue ?? MAX_DUE)) this.pending.push({ id, study: false });
 		for (const batch of o.fresh ?? []) {
-			for (const id of batch) this.pending.push({ id, study: true });
+			if (o.study) for (const id of batch) this.pending.push({ id, study: true });
 			for (const id of this.shuffle([...batch])) this.pending.push({ id, study: false });
 		}
 	}

@@ -7,7 +7,9 @@ import {
 	DAILY_SIZE,
 	EPOCH,
 	markOf,
+	MAX_POINTS,
 	MIX,
+	pointsOf,
 	NO_REPEAT_DAYS,
 	shareText,
 	streak,
@@ -68,15 +70,21 @@ describe('daily set (PROMPT.md 2.3)', () => {
 describe('share text', () => {
 	it('matches the brief', () => {
 		expect(shareText('2026-10-25', { right: 8, ms: 41_000, marks: 'GGGRGGYGRG' })).toBe(
-			'Hoist Daily 2026-10-25 · 8/10 · 0:41\n🟩🟩🟩🟥🟩🟩🟨🟩🟥🟩\nhoist.itsanon.com/daily'
+			'Hoist Daily 2026-10-25 · 725/1000 · 0:41\n🟩🟩🟩🟥🟩🟩🟨🟩🟥🟩\nhoist.itsanon.com/daily'
 		);
 	});
 
-	it('marks typos and hints yellow, misses red', () => {
-		expect(markOf({ correct: true, typo: false, hints: 0 })).toBe('G');
-		expect(markOf({ correct: true, typo: true, hints: 0 })).toBe('Y');
-		expect(markOf({ correct: true, typo: false, hints: 2 })).toBe('Y');
-		expect(markOf({ correct: false, typo: false, hints: 0 })).toBe('R');
+	it('marks the one letter yellow, misses red; an accepted typo is right', () => {
+		expect(markOf({ correct: true, hints: 0 })).toBe('G');
+		expect(markOf({ correct: true, hints: 1 })).toBe('Y');
+		expect(markOf({ correct: false, hints: 0 })).toBe('R');
+	});
+
+	it('scores 100 a flag, 25 with a letter, out of 1000', () => {
+		expect(MAX_POINTS).toBe(1000);
+		expect(pointsOf('GGGGGGGGGG')).toBe(1000);
+		expect(pointsOf('GYRG')).toBe(225);
+		expect(pointsOf('')).toBe(0);
 	});
 
 	it('formats times', () => {

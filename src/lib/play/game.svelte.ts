@@ -12,7 +12,7 @@
  */
 import { buildIndex, check, type NameIndex } from '#lib/match/match.ts';
 import { capitalIndex, checkCapital } from '#lib/match/capital.ts';
-import { hintText, maxHints } from '#lib/match/hint.ts';
+import { hintText, hintWait, type HintRule } from '#lib/match/hint.ts';
 import { rate, type Rating } from '#lib/learn/grade.ts';
 import type { GameCountry, GameData } from '#lib/data/types.ts';
 
@@ -58,6 +58,16 @@ export interface Deck {
 	readonly fast?: boolean;
 	/** Show the lookalike tip after each answer (lookalike drills). */
 	readonly tips?: boolean;
+	/** How many letters Tab may give (default `half`). */
+	readonly hints?: HintRule;
+	/** Points so far, for rounds that score them (the daily). */
+	score?(): number;
+	/**
+	 * The first flag's clock starts at the first keystroke, not when it shows
+	 * (Play's runs, like a typing test). `started` hears that keystroke.
+	 */
+	readonly startOnType?: boolean;
+	started?(): void;
 }
 
 export class Game {
@@ -66,7 +76,8 @@ export class Game {
 	private index: NameIndex;
 	private capitalsIndex?: NameIndex;
 	private random: () => number;
-	deck: Deck;
+	/** Reactive: the header shows its label, and Play swaps it from the bar. */
+	deck = $state.raw() as Deck;
 
 	current = $state<GameCountry | null>(null);
 	show = $state<Show>('flag');
@@ -132,7 +143,14 @@ export class Game {
 		this.ask = p.ask ?? 'name';
 		this.phase = p.study ? 'study' : 'ask';
 		if (!p.study && this.ask === 'pick' && this.current) this.options = this.pickOptions(this.current);
+		this.shownAt = this.deck.startOnType && this.answered === 0 ? 0 : performance.now();
+	}
+
+	/** A keystroke: starts the clock of a round that waits for one. */
+	touch() {
+		if (this.shownAt || !this.current || this.phase !== 'ask') return;
 		this.shownAt = performance.now();
+		this.deck.started?.();
 	}
 
 	/**
@@ -151,13 +169,22 @@ export class Game {
 		return this.ask === 'capital' ? c.capital.name : c.name;
 	}
 
-	/** Tab: reveal the next letter, up to half the answer. */
+	get hintRule(): HintRule {
+		return this.deck.hints ?? 'half';
+	}
+
+	/** Ms until Tab gives the next letter: 0 now, `null` not for this flag. */
+	hintWait(now = performance.now()): number | null {
+		if (!this.current || this.phase !== 'ask' || this.ask === 'pick') return null;
+		return hintWait(this.hintRule, this.answerText, this.hints, this.shownAt ? now - this.shownAt : 0);
+	}
+
+	/** Tab: reveal the next letter, as far as the deck's rule allows. */
 	hint() {
-		if (!this.current || this.phase !== 'ask' || this.ask === 'pick') return;
-		const text = this.answerText;
-		if (this.hints >= maxHints(text)) return;
+		if (this.hintWait() !== 0) return;
+		this.touch();
 		this.hints++;
-		this.input = hintText(text, this.hints);
+		this.input = hintText(this.answerText, this.hints);
 	}
 
 	submit() {
@@ -197,7 +224,7 @@ export class Game {
 
 	private finish(correct: boolean, typo: boolean, confused?: GameCountry, gaveUp = false, picked = false) {
 		const c = this.current!;
-		const ms = performance.now() - this.shownAt;
+		const ms = this.shownAt ? performance.now() - this.shownAt : 0;
 		const outcome: Outcome = {
 			id: c.id,
 			correct,

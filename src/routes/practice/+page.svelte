@@ -63,9 +63,10 @@
 				return `${ids.length - unseen} of ${ids.length}`;
 			case 'lookalikes':
 				return `${ctx.data.lookalikes.length} groups`;
-			case 'speed': {
-				const best = l.progress.best.all;
-				return best ? `Best ${best.right}/${best.total}` : '';
+			case 'today': {
+				const scoped = scopeIds(ctx.data, settings.scope ?? 'all', settings.territories);
+				const n = l.due('flag', scoped).length + Math.min(l.newLeftToday('flag'), l.unseen('flag', scoped).length);
+				return n ? `${n} to do` : 'Done for today';
 			}
 			default:
 				return due ? `${due} due` : unseen ? `${unseen} to learn` : 'All learned';
@@ -81,7 +82,7 @@
 <section class="page">
 	<header class="intro">
 		<h1>Practice</h1>
-		<p class="muted">Pick what to drill. Play on the home page mixes review and new flags for you.</p>
+		<p class="muted">Spaced repetition: each flag comes back just before you would forget it. For quick runs, go to Play.</p>
 	</header>
 
 	<ul class="grid modes" aria-label="Modes">
@@ -113,7 +114,7 @@
 	<h2>Settings</h2>
 	<div class="settings glass">
 		<div class="setting">
-			<span class="label" id="covers">Play covers</span>
+			<span class="label" id="covers">Today covers</span>
 			<div class="chips" role="group" aria-labelledby="covers">
 				{#each FIRST_CHOICE as id (id)}
 					<button class="chip" aria-pressed={(settings.scope ?? 'all') === id} onclick={() => set({ scope: id })}
@@ -130,6 +131,13 @@
 				{/each}
 			</div>
 		</div>
+		<label class="setting toggle">
+			<span>
+				<span class="label">Show new flags first</span>
+				<span class="muted hint">Before a new flag is asked, show its name, capital and place on the globe. Off: new flags are asked straight away.</span>
+			</span>
+			<input type="checkbox" checked={settings.introduce ?? false} onchange={(e) => set({ introduce: e.currentTarget.checked })} />
+		</label>
 		<label class="setting toggle">
 			<span>
 				<span class="label">Territories</span>

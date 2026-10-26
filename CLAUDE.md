@@ -1,6 +1,7 @@
 # Hoist: working on the code
 
-[PROMPT.md](PROMPT.md) is the product brief and the source of truth.
+[PROMPT.md](PROMPT.md) is the product brief and the source of truth, except
+where the owner's later changes (docs/decisions.md, M8 onwards) override it.
 [docs/plan.md](docs/plan.md) tracks the milestones, [docs/decisions.md](docs/decisions.md)
 records every choice the brief does not cover, and [docs/research.md](docs/research.md)
 holds the verified facts behind the brief.
@@ -61,13 +62,15 @@ src/lib/match/          normalising, answer matching (countries, capitals), hint
 src/lib/learn/          spaced repetition: grading, FSRS wrapper, session queue,
                         introduction order, planner, learner, store, schema
                         and migrations, export / import
-src/lib/play/           the quiz: Game and decks, PlayScreen (shared by Play
-                        and Practice), Reveal and Pick (lazy), the lazy
-                        engine entry, scopes and practice modes
+src/lib/play/           the quiz: Game and decks, PlayScreen (shared by Play,
+                        Daily and Practice), Reveal, Pick, RunResults and
+                        RunChart (lazy), the lazy engine entry, scopes,
+                        practice modes, Play's runs (run.ts, RunBar)
 src/lib/data/           generated data (do not edit by hand), types.ts
 src/lib/store/          localStorage access (storage.ts), theme state
 src/lib/server/         prerender only: the catalog of flags and countries,
-                        share images (resvg)
+                        share images (resvg), Play's first-flag script
+src/hooks.server.ts     adds that script to Play's prerendered page
 src/lib/ui/             TopBar, ThemeToggle, small components
 src/routes/             /, /daily, /practice, /practice/[mode], /progress,
                         /flags, /flags/[slug] (+ og.png), /about,
@@ -94,6 +97,10 @@ reports/                generated review reports
 - Every screen is composed around the middle of the viewport.
 - Wrap every storage access in try/catch (`src/lib/store/storage.ts`).
 - Never leak the answer: not in image URLs, alt text, the title, or the DOM.
+- Watch the JavaScript every page loads first (`pnpm size`, `pnpm lighthouse`):
+  code imported by two pages lands in the shared file, and every Svelte
+  runtime helper (`{@html}`, `bind:clientWidth`, ...) lands in the Svelte
+  file even when only lazy code uses it. A few hundred bytes there cost LCP.
 - Look at changes in a browser in light and dark, at 375 px and 1440 px.
 - `pnpm preview` keeps the build it started with: restart it after
   `pnpm build`, or pages load old chunk names and fail.

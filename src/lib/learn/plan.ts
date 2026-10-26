@@ -33,6 +33,8 @@ export interface PlanOptions {
 	freshMax?: number;
 	/** Learn new is an explicit ask for new flags: the daily limit does not apply. */
 	ignoreDailyLimit?: boolean;
+	/** Study cards before new flags (default: the player's setting, off). */
+	study?: boolean;
 	random?: () => number;
 }
 
@@ -49,6 +51,11 @@ export class Planner {
 		this.order = introductionOrder(data.countries, data.familiar);
 		this.groups = groupsOf(data.lookalikes);
 		this.byId = new Map(data.countries.map((c) => [c.id, c]));
+	}
+
+	/** The "Show new flags first" setting. */
+	private get introduce(): boolean {
+		return this.learner.settings.introduce ?? false;
 	}
 
 	similarity = (id: string): Similarity | undefined => {
@@ -70,7 +77,7 @@ export class Planner {
 		const fresh = freshIds.reduce((n, b) => n + b.length, 0);
 		if (due.length || fresh) {
 			return {
-				queue: new SessionQueue({ due, fresh: freshIds, similarity: this.similarity, random: o.random }),
+				queue: new SessionQueue({ due, fresh: freshIds, study: o.study ?? this.introduce, similarity: this.similarity, random: o.random }),
 				due: Math.min(due.length, 50),
 				fresh,
 				extra: false
@@ -89,9 +96,11 @@ export class Planner {
 	 * A lookalike drill (PROMPT.md 2.4, 7.3): a few confusable groups, each
 	 * group's flags back to back so they can be told apart. With `focus`, the
 	 * groups of those flags (the "drill" buttons on Progress); otherwise the
-	 * groups the player knows least. Unseen flags get a study card first.
+	 * groups the player knows least. With `study`, unseen flags get a study
+	 * card first.
 	 */
-	lookalikes(o: { focus?: readonly string[]; groups?: number; now?: number; random?: () => number } = {}): Plan {
+	lookalikes(o: { focus?: readonly string[]; groups?: number; now?: number; random?: () => number; study?: boolean } = {}): Plan {
+		const study = o.study ?? this.introduce;
 		const now = o.now ?? Date.now();
 		const rand = o.random ?? Math.random;
 		const known = (id: string) => {
@@ -116,7 +125,7 @@ export class Planner {
 		for (const g of groups) {
 			const members = g.members.filter((id) => !used.has(id));
 			for (const id of members) used.add(id);
-			for (const id of members) if (!this.learner.card('flag', id)?.reps) sequence.push({ id, study: true });
+			if (study) for (const id of members) if (!this.learner.card('flag', id)?.reps) sequence.push({ id, study: true });
 			for (const id of shuffle(members, rand)) sequence.push({ id, study: false });
 		}
 		// A flag in no group is drilled on its own.
