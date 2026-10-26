@@ -53,27 +53,31 @@ test('a daily round, then the share text', async ({ page, context }) => {
 	const field = page.locator('#answer');
 	for (const [i, id] of ids.entries()) {
 		expect((await shown(page)).id).toBe(id);
-		// Miss the fourth on purpose, take a hint on the seventh.
+		// Miss the fourth on purpose, take the one letter on the seventh.
 		if (i === 3) await field.fill('Atlantis');
 		else if (i === 6) {
 			await field.focus();
+			await expect(page.locator('#keys')).toContainText('Tab a letter (25 points)');
 			await page.keyboard.press('Tab');
+			await page.keyboard.press('Tab');
+			await expect(field).toHaveValue(byId.get(id)!.name.slice(0, 1));
+			await expect(page.locator('#keys')).not.toContainText('Tab');
 			await field.fill(byId.get(id)!.name);
 		} else await field.fill(byId.get(id)!.name);
 		await field.press('Enter');
 		await expect(page.locator('.verdict')).toBeVisible();
 		await field.press('Enter');
 	}
-	await expect(page.getByRole('heading', { name: /9 of 10/ })).toBeVisible();
+	await expect(page.getByRole('heading', { name: /825 of 1000 points/ })).toBeVisible();
 	await page.getByRole('button', { name: 'Copy result' }).click();
 	// The system clipboard may hand back Windows line ends.
 	const text = (await page.evaluate(() => navigator.clipboard.readText())).replace(/\r\n/g, '\n');
-	expect(text).toMatch(/^Hoist Daily 2026-10-25 · 9\/10 · \d+:\d\d\n🟩🟩🟩🟥🟩🟩🟨🟩🟩🟩\nhoist\.itsanon\.com\/daily$/);
+	expect(text).toMatch(/^Hoist Daily 2026-10-25 · 825\/1000 · \d+:\d\d\n🟩🟩🟩🟥🟩🟩🟨🟩🟩🟩\nhoist\.itsanon\.com\/daily$/);
 
 	// One attempt a day: coming back shows the result.
 	await page.reload();
 	await ready(page);
-	await expect(page.getByRole('heading', { name: /9 of 10/ })).toBeVisible();
+	await expect(page.getByRole('heading', { name: /825 of 1000 points/ })).toBeVisible();
 	await expect(page.locator('#answer')).toHaveCount(0);
 });
 
@@ -91,20 +95,6 @@ test('a reload in the middle of the daily carries on where it stopped', async ({
 	await ready(page);
 	expect((await shown(page)).id).toBe(ids[3]);
 	await expect(page.locator('.meta')).toContainText('4 of 10');
-});
-
-test('a speed run moves on by itself and keeps the best time', async ({ page }) => {
-	await page.goto('/practice/speed');
-	await ready(page);
-	await page.getByRole('button', { name: 'Oceania' }).click();
-	const total = data.countries.filter((c) => c.pack === 'core' && c.region === 'oceania').length;
-	for (let i = 0; i < total; i++) {
-		await expect(page.locator('.meta')).toContainText(`${i + 1} of ${total}`);
-		await page.locator('#answer').fill((await shown(page)).name);
-		await page.locator('#answer').press('Enter');
-	}
-	await expect(page.getByRole('heading', { name: new RegExp(`${total} of ${total} in .*A new best`) })).toBeVisible();
-	await expect(page.getByRole('button', { name: /Oceania/ })).toContainText(`${total}/${total}`);
 });
 
 test('lookalike drills say how to tell the flags apart', async ({ page }) => {

@@ -543,3 +543,119 @@ had no label. 200% zoom was checked as a 640 × 450 viewport.
 
 **Copy pass:** the Review card says "Flags due for another look, just before
 you would forget them" instead of naming spaced repetition.
+
+## M8
+
+The owner's first round of changes (2026-10-25). They override the brief
+where the two differ: PROMPT.md 2.1 and 2.2 (Play), 2.3 (the daily's score
+and share text), 2.4 (the speed run moves to Play), 3.2 (study cards) and
+3.3 (hints).
+
+**Study cards are off by default.** New flags are asked straight away; the
+answer, the globe and the capital show after the first try, right or wrong.
+Practice → Settings → "Show new flags first" brings back the study card
+before each new flag, everywhere (Today, regions, Learn new, lookalike
+drills). Learn new's card now says "Five flags you have not seen yet".
+
+**The zoom for a country in focus is at least 2.2**, the zoom where the dots
+have fully given way to solid land with borders (`focusZoom` in
+`camera.ts`). Big countries (Russia 0.9, the US 1.04) used to fly to a
+whole-globe view in dots; at 2.2 the globe still fits the screen, so they
+show their outline and their neighbours. Small countries keep their own,
+closer zoom. Zooming by hand is unchanged.
+
+**Play is runs** (`src/lib/play/run.ts`, `RunDeck`), like a typing test:
+
+- 10, 20 or 30 flags, or a custom number (3 to 197), from the 197 only
+  (never the territories, so runs compare), no repeats. 20 is the default,
+  and the charts open on it. The length is remembered (`runLength`).
+- No letter hints. Esc still shows the answer (a miss). A typo that is
+  accepted counts as right.
+- The clock starts at the first keystroke and, as in the speed run, counts
+  only the time a flag waits for its answer. A right answer moves on by
+  itself after 450 ms; a miss waits for Enter, so the answer can be read.
+- The end shows right / total and accuracy, time and seconds a flag, the
+  best run of that length, the flags missed (with a link to drill them), and
+  a chart of the last 20 runs of that length. Enter starts the next run.
+- Answers are scheduled like the speed run's (warm-up answers, which do not
+  use up the day's new flags), so runs feed Practice.
+
+**Challenge links.** A run's order comes from a 32-bit seed (mulberry32,
+then Fisher-Yates over the 197). `/?n=20&seed=k3x9ab` plays exactly that
+run, and the share text ends with that link: a class can all play the same
+20 flags and compare. Every run has a seed, so any run can be shared after
+it is played. A changed country list would change old links' flags;
+acceptable.
+
+**The first flag is still the first paint.** The run is random, so the
+prerendered page cannot name its first flag. An inline script at the end of
+`<body>` (added at prerender by `hooks.server.ts`,
+`#lib/server/first-flag.ts`) holds the 197 flag files and ratios (no names:
+no answer in the page), runs the same `runOrder` on the seed from the
+address or a random one, and shows that flag before any app JavaScript; the
+app reads the seed from `window.__hoistRun`. Three details mattered for LCP:
+
+- The script is outside the app's root element: a `<script>` among the
+  app's nodes fails hydration and re-renders the console, losing the image.
+  Rendering it with `{@html}` instead adds Svelte's html helper to the shared
+  JavaScript every page loads.
+- A random seed is drawn again until the first flag's file is 4 KB or less
+  (155 of the 197). A few flags with coats of arms are up to 147 KB, which
+  put LCP anywhere from 1.4 to 2.8 s depending on the draw. Challenge links
+  keep their seed.
+- The run helpers load with the quiz engine, not with the page: imported by
+  Play and Progress they landed in the shared file. `$app/navigation` is not
+  imported either (leaving a challenge link uses `history.replaceState` with
+  SvelteKit's own state), and the run chart measures itself with its own
+  ResizeObserver, not `bind:clientWidth`: both pulled code into the files
+  every page loads first. Each cost a few ms of LCP; together they pushed it
+  from 1.4 s to just over the 1.5 s limit.
+
+**The mode bar** sits under the top bar, as in a typing test: Flags or
+Speed run, then the lengths or the regions. It fades out once a run is under
+way and comes back at its end; a restart button sits in the console header
+during a run. On phones the regions scroll sideways, and the globe's zoom
+buttons move to the bottom of the globe so the bar has the top.
+
+**The speed run moved to Play.** Letters come slowly there: the first after
+10 s on a flag, then one every 5 s, up to half the name, so Tab cannot type
+half of every name at once (`hintWait` in `#lib/match/hint.ts`). The keys
+line counts down. The old `/practice/speed` page is gone; Progress still
+lists the best speed runs.
+
+**Today.** What Play did before M8 (due flags, then the day's new ones, over
+the player's scope) is Practice → Today, the first card. The setting "Play
+covers" is now "Today covers". The first-visit starter round is gone: a new
+player lands in a run, like everyone else.
+
+**The daily scores points.** 100 a flag, 25 when the one letter the daily
+allows was taken, 0 for a miss: out of 1000. Only the first Tab gives a
+letter. A typo that is accepted is a full 100 and a green square (it was
+yellow before); yellow now means "with the letter". The share text reads
+`Hoist Daily 2026-10-25 · 725/1000 · 0:41`. Points come from the squares,
+so dailies already played are scored the same way.
+
+**Hints by mode:** Practice up to half the name, any time; Daily one letter;
+Speed run timed; runs none. One rule per deck (`Deck.hints`).
+
+**Runs are stored** in `progress.runs` (schema v3; v2 migrates with an empty
+list), the last 500, about 60 bytes each. Import keeps the runs of both
+files, once each. Progress has a Runs section: lengths as chips (20 first),
+runs, average, the last ten, the best, and a chart of the last 40.
+
+**The chart** is one series of columns (accuracy per run, oldest on the
+left), in ink only, since flags are the only colour: earlier runs faded, the
+latest (or the one just played) in full ink with its value. Hover shows the
+run's score, time and date; a hidden table carries the same numbers for
+screen readers.
+
+**GitHub.** A GitHub mark in the top bar (drawn by a CSS mask from
+`static/icons/github.svg`, since inline it would add to every page's
+JavaScript), an "Open source" section on About, and the repository's
+website field set to https://hoist.itsanon.com. The top bar also gained a
+"Play" link: the wordmark alone did not say where Play was.
+
+**README** now opens with the icon, a "Play now" button, badges (CI,
+Lighthouse, flags, no tracking, offline, SvelteKit, TypeScript, licences),
+a feature table, screenshots of a run and its result, and the keys.
+

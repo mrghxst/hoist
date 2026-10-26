@@ -4,8 +4,8 @@
  */
 import type { Learner } from '#lib/learn/learner.ts';
 import type { SessionQueue } from '#lib/learn/queue.ts';
-import { markOf } from '#lib/learn/daily.ts';
-import type { CardMode, DailyResult, SpeedResult } from '#lib/learn/types.ts';
+import { markOf, pointsOf } from '#lib/learn/daily.ts';
+import type { CardMode, DailyResult, RunResult, SpeedResult } from '#lib/learn/types.ts';
 import type { Ask, Deck, Outcome, Prompt, Show } from './game.svelte.ts';
 
 export interface ModeSpec {
@@ -88,6 +88,7 @@ class Clock {
  */
 export class DailyDeck implements Deck {
 	readonly label: string;
+	readonly hints = 'one';
 	private i: number;
 	private result: DailyResult;
 	private clock: Clock;
@@ -130,21 +131,97 @@ export class DailyDeck implements Deck {
 	elapsed() {
 		return this.clock.ms;
 	}
+
+	score() {
+		return pointsOf(this.result.marks);
+	}
+}
+
+/**
+ * A run on Play (owner, M8): a set number of random flags in the order of a
+ * seed, no letter hints, against the clock, like a typing test. The clock
+ * starts at the first keystroke. A right answer moves on by itself.
+ * Answers are scheduled like any others, without using up the day's new
+ * flags; the run itself goes into the history (the charts).
+ */
+export class RunDeck implements Deck {
+	readonly label: string;
+	readonly fast = true;
+	readonly hints = 'none';
+	readonly startOnType = true;
+	readonly seed: number;
+	readonly ids: readonly string[];
+	private i = 0;
+	private right = 0;
+	private marks = '';
+	private clock = new Clock();
+	private learner: Learner;
+	/** Set when the run is over. */
+	result: RunResult | null = null;
+	best = false;
+	/** The best run of this length before this one. */
+	previous?: RunResult;
+
+	constructor(label: string, ids: readonly string[], seed: number, learner: Learner) {
+		this.label = label;
+		this.ids = ids;
+		this.seed = seed;
+		this.learner = learner;
+	}
+
+	get n() {
+		return this.ids.length;
+	}
+
+	progress() {
+		return { done: Math.min(this.i, this.n), total: this.n };
+	}
+
+	next(): Prompt | null {
+		const id = this.ids[this.i++];
+		if (!id) return null;
+		if (this.i > 1) this.clock.start();
+		return { id };
+	}
+
+	started() {
+		this.clock.start();
+	}
+
+	record(o: Outcome) {
+		this.clock.stop(o.ms);
+		if (o.correct) this.right++;
+		this.marks += o.correct ? 'G' : 'R';
+		this.learner.answer('flag', o.id, o.rating, Date.now(), true);
+		if (this.i >= this.n) {
+			this.result = { n: this.n, right: this.right, ms: Math.round(this.clock.ms), at: Date.now(), marks: this.marks, seed: this.seed };
+			const saved = this.learner.saveRun(this.result);
+			this.best = saved.best;
+			this.previous = saved.previous;
+		}
+	}
+
+	elapsed() {
+		return this.clock.ms;
+	}
 }
 
 /**
  * A speed run (PROMPT.md 2.4): every flag in a scope, shuffled, against the
  * clock. A right answer moves on by itself. The best run per scope is kept.
+ * Letters come slowly (owner, M8): the first after 10 s, then one every 5 s.
  */
 export class SpeedDeck implements Deck {
 	readonly label: string;
 	readonly fast = true;
+	readonly hints = 'timed';
+	readonly startOnType = true;
 	private ids: string[];
 	private i = 0;
 	private right = 0;
 	private clock = new Clock();
 	private learner: Learner;
-	private scope: string;
+	readonly scope: string;
 	/** Set when the run is over. */
 	result: SpeedResult | null = null;
 	best = false;
@@ -167,8 +244,12 @@ export class SpeedDeck implements Deck {
 	next(): Prompt | null {
 		const id = this.ids[this.i++];
 		if (!id) return null;
-		this.clock.start();
+		if (this.i > 1) this.clock.start();
 		return { id };
+	}
+
+	started() {
+		this.clock.start();
 	}
 
 	record(o: Outcome) {

@@ -18,6 +18,17 @@ export const ZOOM_MAX = 4;
 
 export const clampZoom = (z: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
 
+/** Dots below this zoom, solid land with borders from here (`SOLID_FROM` to here cross-fades). */
+export const SOLID_ZOOM = 2.2;
+export const SOLID_FROM = 1.6;
+
+/**
+ * The zoom for a country in focus: its own view, but never so far out that
+ * the land is still dots. A focused country shows its outline and its
+ * neighbours' (owner, M8); a big one simply fills more of the disc.
+ */
+export const focusZoom = (z: number) => clampZoom(Math.max(SOLID_ZOOM, z));
+
 export function cubicInOut(t: number): number {
 	return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
 }

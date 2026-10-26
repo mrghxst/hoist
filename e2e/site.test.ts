@@ -19,7 +19,7 @@ test.describe('offline', () => {
 	test.use({ serviceWorkers: 'allow' });
 
 	test('the quiz works offline after one visit', async ({ page, context }) => {
-		await page.goto('/');
+		await page.goto('/?deck=JP');
 		await ready(page);
 		// Installed means the precache is complete.
 		await page.evaluate(async () => {
@@ -90,8 +90,7 @@ test('"Also accept names in" accepts the chosen language', async ({ page }) => {
 	await japanese.click();
 	await expect(japanese).toHaveAttribute('aria-pressed', 'true');
 
-	// The first starter flag is Japan.
-	await page.goto('/');
+	await page.goto('/?deck=JP');
 	await ready(page);
 	await page.locator('#answer').fill('日本');
 	await page.keyboard.press('Enter');

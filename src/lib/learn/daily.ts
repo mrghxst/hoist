@@ -129,11 +129,20 @@ export function dailySet(date: string, pool: readonly Candidate[]): string[] {
 	return days.get(date)!;
 }
 
-/** G right, Y right with a typo or a hint, R wrong or given up. */
-export function markOf(o: { correct: boolean; typo: boolean; hints: number }): 'G' | 'Y' | 'R' {
+/**
+ * G right, Y right with the one letter the daily allows, R wrong or given
+ * up. A typo that was accepted is right (owner, M8).
+ */
+export function markOf(o: { correct: boolean; hints: number }): 'G' | 'Y' | 'R' {
 	if (!o.correct) return 'R';
-	return o.typo || o.hints > 0 ? 'Y' : 'G';
+	return o.hints > 0 ? 'Y' : 'G';
 }
+
+/** Points per flag (owner, M8): 100 right, 25 right with a letter. */
+export const POINTS: Record<string, number> = { G: 100, Y: 25, R: 0 };
+export const MAX_POINTS = DAILY_SIZE * POINTS.G!;
+
+export const pointsOf = (marks: string) => [...marks].reduce((n, m) => n + (POINTS[m] ?? 0), 0);
 
 /** 41 s → "0:41", 75 min → "1:15:00". */
 export function clock(ms: number): string {
@@ -149,14 +158,16 @@ const SQUARE = { G: '🟩', Y: '🟨', R: '🟥' } as const;
 /**
  * The text to share (PROMPT.md 2.3):
  *
- *     Hoist Daily 2026-10-25 · 8/10 · 0:41
+ *     Hoist Daily 2026-10-25 · 725/1000 · 0:41
  *     🟩🟩🟩🟥🟩🟩🟨🟩🟥🟩
  *     hoist.itsanon.com/daily
  */
 export function shareText(date: string, r: DailyResult): string {
-	const squares = [...r.marks].map((m) => SQUARE[m as keyof typeof SQUARE]).join('');
-	return `${BRAND} Daily ${date} · ${r.right}/${r.marks.length} · ${clock(r.ms)}\n${squares}\n${DOMAIN}/daily`;
+	return `${BRAND} Daily ${date} · ${pointsOf(r.marks)}/${MAX_POINTS} · ${clock(r.ms)}\n${squares(r.marks)}\n${DOMAIN}/daily`;
 }
+
+/** 🟩🟥🟨, one per flag. */
+export const squares = (marks: string) => [...marks].map((m) => SQUARE[m as keyof typeof SQUARE]).join('');
 
 /**
  * Days in a row up to `today` (or up to yesterday, while today is still to

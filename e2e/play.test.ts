@@ -1,17 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-const STARTER: [string, string][] = [
-	['JP', 'Japan'],
-	['BR', 'Brazil'],
-	['CA', 'Canada'],
-	['DE', 'Germany'],
-	['US', 'United States'],
-	['GB', 'United Kingdom'],
-	['FR', 'France'],
-	['CN', 'China'],
-	['KR', 'South Korea'],
-	['CH', 'Switzerland']
-];
+// The quiz on a fixed list (`?deck=`). Play's runs are in runs.test.ts.
 
 // The field takes typing at once; the quiz data arrives after first paint.
 async function ready(page: Page) {
@@ -27,42 +16,8 @@ test.beforeEach(async ({ page }) => {
 	});
 });
 
-test('the first flag is in the HTML without JavaScript', async ({ browser }) => {
-	const ctx = await browser.newContext({ javaScriptEnabled: false });
-	const page = await ctx.newPage();
-	await page.goto('/');
-	const img = page.getByRole('img', { name: 'Flag to name' });
-	await expect(img).toBeVisible();
-	expect(await img.getAttribute('src')).toMatch(/^\/flags\/[0-9a-f]{12}\.(svg|webp)$/);
-	await ctx.close();
-});
-
-test('a full starter round by keyboard only', async ({ page }) => {
-	await page.goto('/');
-	await ready(page);
-	await page.locator('#answer').focus();
-	for (const [, name] of STARTER) {
-		await page.keyboard.type(name);
-		await page.keyboard.press('Enter');
-		await expect(page.locator('.verdict')).toContainText(name);
-		await expect(page.locator('.verdict')).toContainText('✓');
-		await page.keyboard.press('Enter');
-	}
-	await expect(page.getByRole('heading', { name: '10 of 10 right.' })).toBeVisible();
-	await expect(page.getByRole('button', { name: 'Learn all 197' })).toBeVisible();
-});
-
-test('no answer in the page before answering', async ({ page }) => {
-	await page.goto('/');
-	await ready(page);
-	const html = await page.content();
-	expect(html).not.toContain('Japan');
-	expect(html).not.toContain('Tokyo');
-	expect(await page.title()).not.toContain('Japan');
-});
-
 test('a wrong answer, then a right one', async ({ page }) => {
-	await page.goto('/');
+	await page.goto('/?deck=JP,BR');
 	await ready(page);
 	const field = page.locator('#answer');
 	await field.fill('China');
@@ -131,7 +86,7 @@ test('typing and Enter before the quiz data arrives still count', async ({ page 
 		await new Promise((r) => setTimeout(r, 800));
 		await route.continue();
 	});
-	await page.goto('/');
+	await page.goto('/?deck=JP');
 	await expect(page.locator('form.field')).toHaveAttribute('data-hydrated', 'true');
 	const field = page.locator('#answer');
 	await expect(field).toHaveAttribute('aria-busy', 'true');
@@ -171,7 +126,7 @@ test('text typed before the page hydrates is kept', async ({ page }) => {
 		await new Promise((r) => setTimeout(r, 800));
 		await route.continue();
 	});
-	await page.goto('/', { waitUntil: 'commit' });
+	await page.goto('/?deck=JP', { waitUntil: 'commit' });
 	const field = page.locator('#answer');
 	await field.fill('Jap');
 	await expect(page.locator('form.field')).toHaveAttribute('data-hydrated', 'true');

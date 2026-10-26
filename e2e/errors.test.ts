@@ -23,7 +23,7 @@ test('with storage blocked the quiz works and says progress is not saved', async
 	});
 	const errors: string[] = [];
 	page.on('pageerror', (e) => errors.push(e.message));
-	await page.goto('/');
+	await page.goto('/?deck=JP');
 	await ready(page);
 	await expect(page.getByText("Progress won't be saved in this browser.")).toBeVisible();
 	await answerJapan(page);
@@ -36,7 +36,7 @@ test('with storage blocked the quiz works and says progress is not saved', async
 
 test('without the map the quiz still works with typed answers', async ({ page }) => {
 	await page.route('**/geo/**', (route) => route.abort());
-	await page.goto('/');
+	await page.goto('/?deck=JP,BR');
 	await ready(page);
 	await expect(page.getByText('The map did not load')).toBeVisible();
 	await answerJapan(page);
